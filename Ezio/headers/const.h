@@ -66,5 +66,5 @@ struct branch_handler_communication{
     int active_clients;
     sem_t *sem_toNumClients;
     char recive_clients;
-    char transfer_clints;
+    char send_clients;
 };

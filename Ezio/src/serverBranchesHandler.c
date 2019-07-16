@@ -55,9 +55,18 @@ int create_new_branch()
     return 0;
 }
 
-int merge_branches(int pid_clientReciver, int pid_clientSender)
+int merge_branches(int pid_clientReciver, struct branch_handler_communication *reciver_addr,
+                        int pid_clientSender, struct branch_handler_communication *sender_addr)
 {
-    //TODO merge operation
+    reciver_addr->send_clients = (char)0;
+    reciver_addr->recive_clients = (char)1;
+
+    sender_addr->send_clients = (char)1;
+    sender_addr->recive_clients = (char)0;
+
+    //TODO send signals to server branches
+
+    return 0;
 }
 
 void clients_has_changed(int  signum)
@@ -67,6 +76,8 @@ void clients_has_changed(int  signum)
     int min = MAX_CLI_PER_SB+1;
     int veryMin = min;
     pid_t minPid = -1, veryMinPid = -1;
+
+    struct branch_handler_communication *minAddr = NULL, *veryMinAddr = NULL;
 
     int connectedClients = 0;
 
@@ -91,11 +102,14 @@ void clients_has_changed(int  signum)
         if(temp < veryMin ) {
             min = veryMin;
             minPid = veryMinPid;
+            minAddr = veryMinAddr;
             veryMin = temp;
             veryMinPid = (current->info)->branch_pid;
+            veryMinAddr = current->info;
         }else if(temp < min){
             min = temp;
             minPid = (current->info)->branch_pid;
+            minAddr = current->info;
         }
     }
 
@@ -119,7 +133,7 @@ void clients_has_changed(int  signum)
 
         //reciver is the minPidClient
         //sender is the veryMinClient
-        if(!merge_branches(minPid, veryMinPid)){
+        if(!merge_branches(minPid, minAddr, veryMinPid, veryMinAddr)){
             printf("Error in merge_branches\n");
             exit(-1);
         }
