@@ -6,6 +6,8 @@
 
 int actual_branches_num = 0;
 
+struct handler_info *info;
+
 struct branches_info_list{
     struct branch_handler_communication *info;
     struct branches_info_list *next;
@@ -14,6 +16,8 @@ struct branches_info_list{
 
 struct branches_info_list branches_info;
 struct branches_info_list *last_branch_info;
+
+
 
 int create_new_branch()
 {
@@ -55,6 +59,8 @@ int create_new_branch()
     return 0;
 }
 
+
+
 int merge_branches(int pid_clientReciver, struct branch_handler_communication *reciver_addr,
                         int pid_clientSender, struct branch_handler_communication *sender_addr)
 {
@@ -64,10 +70,31 @@ int merge_branches(int pid_clientReciver, struct branch_handler_communication *r
     sender_addr->send_clients = (char)1;
     sender_addr->recive_clients = (char)0;
 
-    //TODO send signals to server branches
+    if(kill(pid_clientReciver, SIGUSR1) == -1){
+        perror("Error in kill (SIGUSR1) the 'reciver': ");
+        exit(-1);
+    }
+
+    if(kill(pid_clientSender, SIGUSR2) == -1){
+        perror("Error in kill (SIGUSR2) the 'sender': ");
+        exit(-1);
+    }
+
+    //waiting that both the reciver and transmitter
+    //has finished to transmit connections (file descriptor)
+    if(sem_wait(info->sem_transfClients) == -1){
+        perror("Error in sem_post (on counting connected clients): ");
+        exit(-1);
+    }
+    if(sem_wait(info->sem_transfClients) == -1){
+        perror("Error in sem_post (on counting connected clients): ");
+        exit(-1);
+    }
 
     return 0;
 }
+
+
 
 void clients_has_changed(int  signum)
 {
@@ -141,12 +168,13 @@ void clients_has_changed(int  signum)
     }
 }
 
+
+
 int main(int argc, char **argv)
 {
     int id_info, id_cache;
     pid_t my_pid;
     sem_t sem_tolistenfd, sem_trasfclients;
-    struct handler_info *info;
 
     int listen_fd;
     struct sockaddr_in address;
@@ -181,7 +209,7 @@ int main(int argc, char **argv)
     //(setting its value to zero), after when he decide to merge 2 branches.
     //Each branch involved in this procedure will post this semaphore when
     //the transmisison of the clients is completed
-    if(sem_init(&sem_trasfclients, 1, 2) == -1){
+    if(sem_init(&sem_trasfclients, 1, 0) == -1){
         perror("Error in sem_init (sem_trasfclients): ");
         exit(-1);
     }
