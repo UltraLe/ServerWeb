@@ -3,4 +3,6 @@ project(ServerWeb C)
 
 set(CMAKE_C_STANDARD 99)
 
-add_executable(ServerWeb main.c)
+include_directories(Ezio/headers)
+
+add_executable(ServerBranchesHandler Ezio/src/serverBranchesHandler.c)
