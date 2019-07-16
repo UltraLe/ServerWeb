@@ -6,3 +6,4 @@ set(CMAKE_C_STANDARD 99)
 include_directories(Ezio/headers)
 
 add_executable(ServerBranchesHandler Ezio/src/serverBranchesHandler.c)
+add_executable(ServerBranch Ezio/src/serverBranch.c)

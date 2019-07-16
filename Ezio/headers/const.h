@@ -42,11 +42,9 @@
 
 #define CACHE_BYTES 1048576     //number of bytes preserved for the cache (10MB)
 
-#define IPC_CACHE_KEY 30        //key to attach to the cahce
+#define IPC_CACHE_KEY 30        //key to attach to the cache
 
 #define IPC_HNDLR_INFO_KEY 31   //key to attach to the information of the server branches handler
-
-#define MAX_NUM_SB 10000         //max number of server branches
 
 #define SERVER_PORT 1033
 
@@ -59,13 +57,14 @@ char *socket_path = "\0hidden"; //strings that identifies the AF_UNIX socket
 struct handler_info{
     pid_t pid;
     int listen_fd;
-    sem_t *sem_tolistenfd;
-    sem_t *sem_transfclients;
+    sem_t *sem_toListenFd;
+    sem_t *sem_transfClients;
 };
 
 struct branch_handler_communication{
     int branch_pid;
-    int branch_clients;
+    int active_clients;
+    sem_t *sem_toNumClients;
     char recive_clients;
     char transfer_clints;
 };
