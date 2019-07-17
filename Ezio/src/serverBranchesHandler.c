@@ -22,40 +22,52 @@ struct branch_handler_communication *array_hb;
 
 int look_for_first_array_pos()
 {
-    int i = 0;
-    for(struct branches_info_list *current = &branches_info; current != NULL; current = current->next){
-        if((current->info)->branch_pid == -1)
-            return i;
-        ++i;
-    }
+    for(int i = 0; i < actual_branches_num+1; ++i){
 
+        if((array_hb+i)->branch_pid == -1)
+            return i;
+    }
     return -1;
 }
 
 
 int create_new_branch()
 {
-    //initializing the memory populated with branch_handler_communication structures
-    //that the handler creator will use to send information to a specific server branch
+    ///last_branch_info is the pointer to the struct that has to be
+    ///filled with the information used by the server branch
+    ///which we are going to create right now
+
+    //finding a position of the array_hb...
+    int pos = look_for_first_array_pos();
+
+    //...and memorizing it into the information list
+    last_branch_info->info = (array_hb + pos);
+
+    //marking the pid in this memory as 'used' by simply giving to him  a value != -1
+    (last_branch_info->info)->branch_pid = 0;
+
+    //preparing the 'next' pointer
     if((last_branch_info->next = mmap(NULL, sizeof(struct branches_info_list), PROT_READ|PROT_WRITE,
                                          MAP_ANON|MAP_PRIVATE, 0, 0)) == (void *)-1){
         perror("Unable to mmap (creating new entry in branches_info): ");
         exit(-1);
     }
 
+    //linking the last element of the list
+    (last_branch_info->next)->prev = last_branch_info;
+
     //when the branches handler has to check the global number of client
     //connected, it has to wait for this semaphore for each branch
-    if(sem_init(&((last_branch_info->info)->sem_toNumClients), 1, 0) == -1){
+    //N.B.:last_brench_info->info has to point to some (array_hb + i) where i
+    //is the position that has been (already) chosen
+    if(sem_init(&((last_branch_info->info)->sem_toNumClients), 1, 1) == -1){
         perror("Error in sem_init (sem_tolistenfd): ");
         exit(-1);
     }
 
-
     //giving the position of the array_hb that the branch will own
     char memAddr[5];
     memset(memAddr, 0, sizeof(memAddr));
-
-    int pos = look_for_first_array_pos();
 
     printf("position: %d\n", pos);
     sprintf(memAddr, "%d", pos);
@@ -68,22 +80,8 @@ int create_new_branch()
 
     actual_branches_num++;
 
-    //moving the pointer to the last branch info
+    //setting to the next element of the list
     last_branch_info = last_branch_info->next;
-    last_branch_info->info = array_hb + pos;
-    (last_branch_info->info)->branch_pid = -1;
-
-    //waiting the child to initializa the structure
-    if(sem_wait(&((last_branch_info->info)->sem_toNumClients)) == -1){
-        perror("Error in sem_post (on counting connected clients): ");
-        exit(-1);
-    }
-
-    //resetting it to value = 1
-    if(sem_post(&((last_branch_info->info)->sem_toNumClients)) == -1){
-        perror("Error in sem_post (on counting connected clients): ");
-        exit(-1);
-    }
 
     printf("\t\t\tNew server branch generated\n");
 
@@ -117,11 +115,11 @@ int merge_branches(int pid_clientReciver, struct branch_handler_communication *r
 
     //waiting that both the reciver and transmitter
     //has finished to transmit connections (file descriptor)
-    if(sem_wait(info->sem_transfClients) == -1){
+    if(sem_wait(&(info->sem_transfClients)) == -1){
         perror("Error in sem_post (on counting connected clients): ");
         exit(-1);
     }
-    if(sem_wait(info->sem_transfClients) == -1){
+    if(sem_wait(&(info->sem_transfClients)) == -1){
         perror("Error in sem_post (on counting connected clients): ");
         exit(-1);
     }
@@ -172,6 +170,7 @@ void clients_has_changed(int  signum)
 
     //looking for the number of ALL the connected clients
     for(struct branches_info_list *current = &branches_info; (current->info)->branch_pid != -1; current = current->next){
+
         if(sem_wait(&((current->info)->sem_toNumClients)) == -1){
             perror("Error in sem_wait (on counting connected clients): ");
             exit(-1);
@@ -235,8 +234,7 @@ void clients_has_changed(int  signum)
 
 
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
     int id_info, id_cache, id_hb;
     pid_t my_pid;
     sem_t sem_tolistenfd, sem_trasfclients;
@@ -246,40 +244,41 @@ int main(int argc, char **argv)
     int socket_opt = 1;
 
     //initializing cache address
-    if((id_cache =  shmget(IPC_CACHE_KEY, CACHE_BYTES, IPC_CREAT|0666)) == -1){
+    if ((id_cache = shmget(IPC_CACHE_KEY, CACHE_BYTES, IPC_CREAT|0666)) == -1) {
         perror("Error in shmget (cache): ");
         exit(-1);
     }
 
     //initializing address of the struct that will be used by all the server branches
     //to acquire handler creator informations
-    if((id_info =  shmget(IPC_HNDLR_INFO_KEY, sizeof(struct handler_info), IPC_CREAT|0666)) == -1){
+    if ((id_info = shmget(IPC_HNDLR_INFO_KEY, sizeof(struct handler_info), IPC_CREAT|0666)) == -1) {
         perror("Error in shmget (handler info): ");
         exit(-1);
     }
 
     //initializing memory that will be used for the transmission of the information
     //between handler and branch
-    if((id_hb = shmget(IPC_BH_COMM_KEY, sizeof(struct branch_handler_communication)*MAX_BRANCHES, IPC_CREAT|0666)) == -1){
+    if ((id_hb = shmget(IPC_BH_COMM_KEY, sizeof(struct branch_handler_communication) * MAX_BRANCHES,
+                        IPC_CREAT | 0666)) == -1) {
         perror("Error in shmget (handler-branch): ");
         exit(-1);
     }
 
     //attaching the memory starting from array_hb. This way we can see this memory
     //as it was an array_hb[MAX_BRANCHES].
-    if((array_hb = shmat(id_hb, array_hb, SHM_R|SHM_W)) == (void *)-1){
+    if ((array_hb = shmat(id_hb, array_hb, SHM_R | SHM_W)) == (void *) -1) {
         perror("Error in shmat (array_hb): ");
         exit(-1);
     }
 
-    if((info = shmat(id_info, NULL, SHM_R|SHM_W)) == (void *)-1){
+    if ((info = shmat(id_info, NULL, SHM_R | SHM_W)) == (void *) -1) {
         perror("Error in shmat: ");
         exit(-1);
     }
 
     //initializing semaphore which will be used by all server branches to
     //acquire the listening socket and serve clients
-    if(sem_init(&sem_tolistenfd, 1, 1) == -1){
+    if (sem_init(&sem_tolistenfd, 1, 1) == -1) {
         perror("Error in sem_init (sem_tolistenfd): ");
         exit(-1);
     }
@@ -288,7 +287,7 @@ int main(int argc, char **argv)
     //after when he decide to merge 2 branches.
     //Each branch involved in this procedure will post this semaphore when
     //the transmission of the clients is completed
-    if(sem_init(&sem_trasfclients, 1, 0) == -1){
+    if (sem_init(&sem_trasfclients, 1, 0) == -1) {
         perror("Error in sem_init (sem_trasfclients): ");
         exit(-1);
     }
@@ -299,19 +298,19 @@ int main(int argc, char **argv)
     address.sin_port = htons(SERVER_PORT);
     address.sin_family = AF_INET;
 
-    if((listen_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1){
+    if ((listen_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
         perror("Error in socket: ");
         exit(-1);
     }
 
     //TODO check if child (created with execl) becomes zombies when they dies, and handle it
 
-    if(setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &socket_opt, sizeof(socket_opt)) == -1){
+    if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &socket_opt, sizeof(socket_opt)) == -1) {
         perror("Error in setsockopt: ");
         exit(-1);
     }
 
-    if(listen(listen_fd, BACKLOG) == -1){
+    if (listen(listen_fd, BACKLOG) == -1) {
         perror("Error in listen: ");
         exit(-1);
     }
@@ -321,21 +320,27 @@ int main(int argc, char **argv)
     //inserting handler information into the shared structure
     info->pid = my_pid;
     info->listen_fd = listen_fd;
-    info->sem_toListenFd = &sem_tolistenfd;
-    info->sem_transfClients = &sem_trasfclients;
+    info->sem_toListenFd = sem_tolistenfd;
+    info->sem_transfClients = sem_trasfclients;
 
     //when the number of the active clients of a branch get to the 10%, 50% and 80%
     //of MAX_CLI_PER_SB, it signals the creator with SIGUSR1.
     //The branches handler will decide whether merge or create branches.
-    if(signal(SIGUSR1, clients_has_changed) == SIG_ERR){
+    if (signal(SIGUSR1, clients_has_changed) == SIG_ERR) {
         perror("Error in signal: ");
         exit(-1);
     }
 
-    //initializing the first elemento of the array_hb
-    branches_info.info = array_hb;
-    (branches_info.info)->branch_pid = -1;
+    //initializing the list of branches
     last_branch_info = &branches_info;
+
+    //initializing the array. Operation needed to distinguish
+    //free positions
+    printf("Initializing shared memory\n");
+    for (int i = 0; i < MAX_BRANCHES; ++i){
+        (array_hb +i)->branch_pid = -1;
+    }
+    printf("Shared memory initialized\n");
 
     //generating the initial server branches
     for(int i = 0; i < NUM_INIT_SB; ++i) {
@@ -345,17 +350,8 @@ int main(int argc, char **argv)
         }
     }
 
-    sleep(5);
-
-
-    for(int i = 0; i < NUM_INIT_SB; ++i){
-        printf("PID of child-%d from father: %d\n", i, (array_hb+i)->branch_pid);
-    }
-
     //waiting for signals to come
     pause();
-
-
 
     printf("\t\t\tWARNING !!!\nServer branches handler has just returned\n");
 }

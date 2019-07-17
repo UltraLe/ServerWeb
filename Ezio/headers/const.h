@@ -44,9 +44,9 @@
 
 #define IPC_CACHE_KEY 30        //key to attach to the cache
 
-#define IPC_HNDLR_INFO_KEY 31   //key to attach to the information of the server branches handler
+#define IPC_HNDLR_INFO_KEY 32   //key to attach to the information of the server branches handler
 
-#define IPC_BH_COMM_KEY 32      //key to attach to the memory used to transfer information
+#define IPC_BH_COMM_KEY 34      //key to attach to the memory used to transfer information
                                 //between handler and branch
 
 #define MAX_BRANCHES 10000       //used to initialize the memory described up above
@@ -62,8 +62,8 @@ char *socket_path = "\0hidden"; //strings that identifies the AF_UNIX socket
 struct handler_info{
     pid_t pid;
     int listen_fd;
-    sem_t *sem_toListenFd;
-    sem_t *sem_transfClients;
+    sem_t sem_toListenFd;
+    sem_t sem_transfClients;
 };
 
 struct branch_handler_communication{
