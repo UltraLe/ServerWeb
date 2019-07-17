@@ -46,6 +46,11 @@
 
 #define IPC_HNDLR_INFO_KEY 31   //key to attach to the information of the server branches handler
 
+#define IPC_BH_COMM_KEY 32      //key to attach to the memory used to transfer information
+                                //between handler and branch
+
+#define MAX_BRANCHES 10000       //used to initialize the memory described up above
+
 #define SERVER_PORT 1033
 
 #define SERVER_ADDR INADDR_ANY
@@ -64,7 +69,7 @@ struct handler_info{
 struct branch_handler_communication{
     int branch_pid;
     int active_clients;
-    sem_t *sem_toNumClients;
+    sem_t sem_toNumClients;
     char recive_clients;
     char send_clients;
 };
