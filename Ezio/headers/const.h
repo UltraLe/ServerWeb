@@ -26,9 +26,12 @@
 #define NUM_INIT_SB 2           //number of the server branches that will be always
                                 //ready to serve clients
 
-#define MAX_CLI_PER_SB 512       //number of clients that each server branch will handle
+#define MAX_CLI_PER_SB 512      //number of clients that each server branch will handle
 
-#define CHK_IDLE_CLI_SEC 120    //number of seconds after which will be closed a connection
+#define CLEANER_CHECK_SEC 120   //number of seconds after which a cleaner will check for
+                                //idle client, and close their connection
+
+#define MAX_IDLE_TIME 120       //number of seconds after which will be closed a connection
                                 //of an idle client
 
 #define NEW_SB_PERC 0.8         //when the percentage of the (total) connected clients is grater
@@ -39,6 +42,12 @@
                                 //(i.e. A and B), and the server branch with less connected clients (i.e. A) will send
                                 //them to the other branch (i.e. B). This operation will be executed only if
                                 //the number of active server branches is grather than NUM_INIT_SB
+
+#define SIGNAL_PERC1 0.1        //every time that a single branch reaches 10%, 50% and 80%
+                                //of its maxmimum client capacity, it signal to the handler
+#define SIGNAL_PERC2 0.5        //and he will know whether merge or create branches or ignore the signal
+
+#define SIGNAL_PERC3 0.8
 
 #define CACHE_BYTES 1048576     //number of bytes preserved for the cache (10MB)
 
@@ -51,7 +60,7 @@
 
 #define MAX_BRANCHES 10000      //used to initialize the memory described up above
 
-#define CHECK_PERC_EACH 10       //check the increasing/decreasing client number (of a server breanch)
+#define CHECK_PERC_EACH 10      //check the increasing/decreasing client number (of a server breanch)
                                 //every abs(CHECK_PER_EACH) connection recived/closed
 
 #define SERVER_PORT 1033

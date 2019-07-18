@@ -2,8 +2,8 @@
 // Created by ezio on 16/07/19.
 //
 
-#include "const.h"
 #include "writen.h"
+#include "const.h"
 
 #include <sys/select.h>
 #include <sys/time.h>
@@ -11,9 +11,7 @@
 #include <asm/errno.h>
 #include <errno.h>
 
-
 #define READ_BUFFER_BYTE 4096
-
 
 struct client_list{
     struct client_info client;
@@ -21,6 +19,7 @@ struct client_list{
     struct client_list *prev;
 };
 
+struct handler_info *handler_info;
 struct client_list connectedClients;
 struct client_list *lastConnectedClient;
 
@@ -31,9 +30,92 @@ int numSetsReady, max_fd;
 fd_set readSet, allSet;
 
 
+
+
+void clean()
+{
+    //getting current time
+    time_t now = time(0);
+
+    if(now == (time_t)-1){
+        perror("Error in time (clean): ");
+        return;
+    }
+
+    int time_diff;
+
+    for(struct client_list *current = &connectedClients; (current->client).fd != -1; current = current->next){
+
+        //calculate difference between last time that a client was active and now
+        time_diff = (current->client).last_time_active - now;
+
+        //if the client have been inactive for MAX_IDLE_TIME seconds, then colse its connection
+        if(time_diff >= MAX_IDLE_TIME)
+            if(remove_client(current->client) == -1){
+                printf("Error: could not remove the client (clean)\n");
+                return;
+            }
+
+    }
+
+    //restarting the timer fot the next cleaning operation
+    alarm(CLEANER_CHECK_SEC);
+}
+
+
 void checkClientPercentage()
 {
+    float old_perc, new_perc;
+
+    //calculating 'OLD' percentage of connected clients
+    old_perc = (float)(lastClientNumWhenChecked*100)/MAX_CLI_PER_SB;
+
+    if (0 <= old_perc < SIGNAL_PERC1*100) {
+        old_perc = 1;
+    }else if(SIGNAL_PERC1*100 <= old_perc && old_perc < SIGNAL_PERC2*100) {
+        old_perc = 2;
+    }else if(SIGNAL_PERC2*100 <= old_perc && old_perc < SIGNAL_PERC3*100) {
+        old_perc = 3;
+    }else if(SIGNAL_PERC3*100 <= old_perc && old_perc < 100) {
+        old_perc = 4;
+    }else if(old_perc == 100) {
+        old_perc = 5;
+    }else {
+        printf("Something went wrong (OLD perc)\n");
+        return;
+    }
+
+    //memorizing the number of connecten clients when this function is called
     lastClientNumWhenChecked = actual_clients;
+
+    //calculating 'NEW' (actual) percentage of connected clients
+    new_perc = (float)(lastClientNumWhenChecked*100)/MAX_CLI_PER_SB;
+
+    if (0 <= new_perc < SIGNAL_PERC1*100) {
+        new_perc = 1;
+    }else if(SIGNAL_PERC1*100 <= new_perc && new_perc < SIGNAL_PERC2*100) {
+        new_perc = 2;
+    }else if(SIGNAL_PERC2*100 <= new_perc && new_perc < SIGNAL_PERC3*100) {
+        new_perc = 3;
+    }else if(SIGNAL_PERC3*100 <= new_perc && new_perc < 100) {
+        new_perc = 4;
+    }else if(new_perc == 100) {
+        new_perc = 5;
+    }else {
+        printf("Something went wrong (NEW perc)\n");
+        return;
+    }
+
+    //every time that OLD PERF is different than NEW PERC,
+    //send a signal to the server branches handler
+    if(old_perc != new_perc){
+        if(kill(handler_info->pid, SIGUSR1) == -1){
+            perror("Error in sending SIGUSR1 to handler: ");
+            return;
+        }
+    }
+
+    //else dont do anything, the number of connected clients is stable
 
 }
 
@@ -78,6 +160,11 @@ int remove_client(struct client_info client)
 
         //removing client from connectedClient list
         if((current->client).fd == client.fd){
+
+            if(close(client.fd) == -1){
+                perror("Unable to close connection (remove_client): ");
+                exit(-1);
+            }
 
             //remove client from allSet
             FD_CLR(client.fd, &allSet);
@@ -127,7 +214,10 @@ int handleRequest(struct client_info client)
 
         if((numByteRead = read(client.fd, readBuffer, sizeof(readBuffer))) == 0){
             //client has closed connection
-            remove_client(client);
+            if(remove_client(client) == -1){
+                printf("Error: could not remove the client (handleRequest)\n");
+                return -1;
+            }
         }else{
 
             //USATA PER TEST
@@ -185,7 +275,6 @@ int main(int argc, char **argv)
 
 
     //attaching to handler 'global' information structure
-    struct handler_info *handler_info;
     int id_handlerInfo;
     if((id_handlerInfo = shmget(IPC_HNDLR_INFO_KEY, sizeof(struct handler_info), 0)) == -1){
         perror("Error in shmget (getting handler_info structure): ");
@@ -208,12 +297,31 @@ int main(int argc, char **argv)
         exit(-1);
     }
 
-    //TODO implement after server features
-    //redirecting signals SIGUSR1, SIGUSR2
-    // ...
+    //the server branch will react to SIGUSR1 by
+    //setting up an AF_UNIX socket through with it
+    //will recive the connections of another server branch
+    if(signal(SIGUSR1, ) == SIG_ERR){
+        perror("Error in signal (SIGUSR1): ");
+        exit(-1);
+    }
 
-    //TODO implemet cleaner thread creation, that checks inactive connections
+    //the server branch will react to SIGUSR2 by
+    //setting up an AF_UNIX socket through with it
+    //will send the connections to another server branch
+    //and return when the operatino is complete
+    if(signal(SIGUSR2, ) == SIG_ERR){
+        perror("Error in signal (SIGUSR2): ");
+        exit(-1);
+    }
 
+
+    //setting up the cleaner
+    if(signal(SIGALRM, clean) == SIG_ERR){
+        perror("Error in signal (clean): ");
+        exit(-1);
+    }
+    //starting its timer
+    alarm(CLEANER_CHECK_SEC);
 
 
     ///here starts the main body of the server branch
@@ -296,7 +404,11 @@ int main(int argc, char **argv)
         for(struct client_list *current = &connectedClients; (current->client).fd != -1 && numSetsReady > 0;
                                                                                 current = current->next){
 
-            handleRequest(current->client);
+            if(handleRequest(current->client) == -1){
+                printf("Error: counld not handleRequest (main)\n");
+                continue;
+            }
+
             numSetsReady--;
         }
 
