@@ -4,6 +4,8 @@
 
 #include "writen.h"
 #include "const.h"
+#include "fileDescriptorTransmission.h"
+
 
 #include <sys/select.h>
 #include <sys/time.h>
@@ -31,7 +33,24 @@ fd_set readSet, allSet;
 
 
 
+//function that recive the client connection from a server branch
+void recive_clients()
+{
 
+}
+
+
+
+//function that sends client connection to an another server branch
+//and then the server branch dies
+void send_clients()
+{
+
+}
+
+
+
+//function that close the connection of the inactive clients
 void clean()
 {
     //getting current time
@@ -63,6 +82,7 @@ void clean()
 }
 
 
+//function that checks the increasing/decreasing client connections
 void checkClientPercentage()
 {
     float old_perc, new_perc;
@@ -120,6 +140,7 @@ void checkClientPercentage()
 }
 
 
+//functions that insert a new client into the connected client list
 int insert_new_client(int connect_fd, struct sockaddr_in *clientAddress)
 {
     //inserting client into the last position (which has to be initialized)
@@ -154,6 +175,7 @@ int insert_new_client(int connect_fd, struct sockaddr_in *clientAddress)
 
 
 
+//function that close (and remove) a client connection
 int remove_client(struct client_info client)
 {
     for(struct client_list *current = &connectedClients; (current->client).fd != -1; current = current->next){
@@ -195,6 +217,7 @@ int remove_client(struct client_info client)
 
 
 
+//function that handles a client HTTP request
 int handleRequest(struct client_info client)
 {
     int numByteRead;
@@ -300,7 +323,7 @@ int main(int argc, char **argv)
     //the server branch will react to SIGUSR1 by
     //setting up an AF_UNIX socket through with it
     //will recive the connections of another server branch
-    if(signal(SIGUSR1, ) == SIG_ERR){
+    if(signal(SIGUSR1, recive_clients) == SIG_ERR){
         perror("Error in signal (SIGUSR1): ");
         exit(-1);
     }
@@ -308,8 +331,8 @@ int main(int argc, char **argv)
     //the server branch will react to SIGUSR2 by
     //setting up an AF_UNIX socket through with it
     //will send the connections to another server branch
-    //and return when the operatino is complete
-    if(signal(SIGUSR2, ) == SIG_ERR){
+    //and return when the operation is complete
+    if(signal(SIGUSR2, send_clients) == SIG_ERR){
         perror("Error in signal (SIGUSR2): ");
         exit(-1);
     }
