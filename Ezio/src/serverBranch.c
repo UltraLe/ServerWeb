@@ -24,7 +24,8 @@ struct handler_info *handler_info;
 struct client_list connectedClients;
 struct client_list *lastConnectedClient;
 
-int actual_clients = 0;
+sem_t *sem_cli;
+int *actual_clients;
 int lastClientNumWhenChecked = 0;
 
 int numSetsReady, max_fd;
@@ -35,15 +36,25 @@ fd_set readSet, allSet;
 
 
 //functions that insert a new client into the connected client list
-int insert_new_client(int connect_fd, struct sockaddr_in *clientAddress)
+int insert_new_client(int connect_fd, struct sockaddr_in clientAddress)
 {
     //inserting client into the last position (which has to be initialized)
-    if((actual_clients++) == MAX_CLI_PER_SB)
+    if(sem_wait(sem_cli) == -1){
+        perror("Unable to sem_wait (insert_new_client): ");
+        return -1;
+    }
+    *actual_clients += 1;
+    if(sem_post(sem_cli) == -1){
+        perror("Unable to sem_post (insert_new_client): ");
+        return -1;
+    }
+
+    if((*actual_clients) == MAX_CLI_PER_SB)
         return -1;
 
     //inserting client information into the client list
     (lastConnectedClient->client).fd = connect_fd;
-    (lastConnectedClient->client).client_addr = *clientAddress;
+    (lastConnectedClient->client).client_addr = clientAddress;
     (lastConnectedClient->client).last_time_active = time(0);
 
     //inserting client into the set
@@ -61,7 +72,7 @@ int insert_new_client(int connect_fd, struct sockaddr_in *clientAddress)
     lastConnectedClient = lastConnectedClient->next;
     (lastConnectedClient->client).fd = -1;
 
-    if(abs(actual_clients-lastClientNumWhenChecked) >= CHECK_PERC_EACH)
+    if(abs(*(actual_clients)-lastClientNumWhenChecked) >= CHECK_PERC_EACH)
             checkClientPercentage();
 
     return 0;
@@ -97,7 +108,17 @@ int remove_client(struct client_info client)
 
             free(&current);
 
-            if(abs(actual_clients-lastClientNumWhenChecked) >= CHECK_PERC_EACH)
+            if(sem_wait(sem_cli) == -1){
+                perror("Unable to sem_wait (insert_new_client): ");
+                return -1;
+            }
+            *actual_clients -= 1;
+            if(sem_post(sem_cli) == -1){
+                perror("Unable to sem_post (insert_new_client): ");
+                return -1;
+            }
+
+            if(abs(*(actual_clients)-lastClientNumWhenChecked) >= CHECK_PERC_EACH)
                 checkClientPercentage();
 
             //TODO qui aggiornamento file log
@@ -186,9 +207,10 @@ int main(int argc, char **argv)
     talkToHandler += position;
 
     //initializing data which will be used to talk with the handler
-    int *activeClients = &(talkToHandler->active_clients);
+    actual_clients = &(talkToHandler->active_clients);
+    *actual_clients = 0;
     talkToHandler->branch_pid = pid;
-    sem_t *sem_cli = &(talkToHandler->sem_toNumClients);
+    sem_cli = &(talkToHandler->sem_toNumClients);
 
 
     //attaching to handler 'global' information structure
@@ -246,7 +268,6 @@ int main(int argc, char **argv)
 
     struct sockaddr_in acceptedClientAddress;
     socklen_t lenCliAddr;
-    memset(&acceptedClientAddress, 0, sizeof(acceptedClientAddress));
 
     //initializing client list
     lastConnectedClient = &connectedClients;
@@ -273,7 +294,7 @@ int main(int argc, char **argv)
 
         //if a new client try to connect to the web server,
         //and the server branch can handle other connection
-        if(FD_ISSET(handler_info->listen_fd, &readSet) && actual_clients != MAX_CLI_PER_SB) {
+        if(FD_ISSET(handler_info->listen_fd, &readSet) && (*actual_clients) != MAX_CLI_PER_SB) {
 
             //try to accept its connection
             sem_trywait(&(handler_info->sem_toListenFd));
@@ -286,6 +307,8 @@ int main(int argc, char **argv)
                     perror("Error in sem_trywait:");
                     exit(-1);
             }
+
+            memset(&acceptedClientAddress, 0, sizeof(acceptedClientAddress));
 
             //if the branch is here he has to take care of the connection :)
             if ((connect_fd = accept(handler_info->listen_fd,
@@ -302,7 +325,7 @@ int main(int argc, char **argv)
                 exit(-1);
             }
 
-            if (insert_new_client(connect_fd, &acceptedClientAddress) == -1) {
+            if (insert_new_client(connect_fd, acceptedClientAddress) == -1) {
                 printf("Cannot accept client, max capacity has been reached\n");
             }
 
