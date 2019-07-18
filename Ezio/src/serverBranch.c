@@ -2,7 +2,6 @@
 // Created by ezio on 16/07/19.
 //
 
-#include "writen.h"
 #include "const.h"
 #include "fileDescriptorTransmission.h"
 
@@ -11,6 +10,7 @@
 #include <time.h>
 #include <asm/errno.h>
 #include <errno.h>
+#include "writen.h"
 
 #define READ_BUFFER_BYTE 4096
 
@@ -31,9 +31,7 @@ int lastClientNumWhenChecked = 0;
 int numSetsReady, max_fd;
 fd_set readSet, allSet;
 
-#include "eventsHandlers.h"
-
-
+#include "checkClientPercentage.h"
 
 //functions that insert a new client into the connected client list
 int insert_new_client(int connect_fd, struct sockaddr_in clientAddress)
@@ -73,7 +71,7 @@ int insert_new_client(int connect_fd, struct sockaddr_in clientAddress)
     (lastConnectedClient->client).fd = -1;
 
     if(abs(*(actual_clients)-lastClientNumWhenChecked) >= CHECK_PERC_EACH)
-            checkClientPercentage();
+        checkClientPercentage();
 
     return 0;
 }
@@ -106,7 +104,9 @@ int remove_client(struct client_info client)
                 (current->prev)->next = current->next;
             }
 
-            free(&current);
+            //free only if it is not the first element
+            if(current != &connectedClients)
+                free(current);
 
             if(sem_wait(sem_cli) == -1){
                 perror("Unable to sem_wait (insert_new_client): ");
@@ -129,6 +129,10 @@ int remove_client(struct client_info client)
 
     return -1;
 }
+
+
+
+#include "eventsHandlers.h"
 
 
 
@@ -290,8 +294,6 @@ int main(int argc, char **argv)
             exit(-1);
         }
 
-        printf("Select returned something\n");
-
         //if a new client try to connect to the web server,
         //and the server branch can handle other connection
         if(FD_ISSET(handler_info->listen_fd, &readSet) && (*actual_clients) != MAX_CLI_PER_SB) {
@@ -317,7 +319,6 @@ int main(int argc, char **argv)
                 exit(-1);
             }
 
-            printf("Clientaccepted\n");
 
             //posting the semaphore, once accepted the connection
             if (sem_post(&(handler_info->sem_toListenFd)) == -1) {
@@ -329,11 +330,8 @@ int main(int argc, char **argv)
                 printf("Cannot accept client, max capacity has been reached\n");
             }
 
-            printf("Client inserted\n");
 
             numSetsReady--;
-
-            printf("numSetsReady: %d\n", numSetsReady);
 
             //look for other descriptors
             if (numSetsReady <= 0)

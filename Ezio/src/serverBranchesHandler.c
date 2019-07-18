@@ -140,7 +140,9 @@ int merge_branches(int pid_clientReciver, struct branch_handler_communication *r
                 branches_info.prev = NULL;
             }
 
-            free(current);
+            //free only if it is not the first element
+            if(current != &branches_info)
+                free(current);
             break;
         }
 
