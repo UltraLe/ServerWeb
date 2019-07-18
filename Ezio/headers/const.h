@@ -49,13 +49,17 @@
 #define IPC_BH_COMM_KEY 34      //key to attach to the memory used to transfer information
                                 //between handler and branch
 
-#define MAX_BRANCHES 10000       //used to initialize the memory described up above
+#define MAX_BRANCHES 10000      //used to initialize the memory described up above
+
+#define CHECK_PERC_EACH 10       //check the increasing/decreasing client number (of a server breanch)
+                                //every abs(CHECK_PER_EACH) connection recived/closed
 
 #define SERVER_PORT 1033
 
 #define SERVER_ADDR INADDR_ANY
 
 #define BACKLOG 512
+
 
 char *socket_path = "\0hidden"; //strings that identifies the AF_UNIX socket
 
@@ -72,4 +76,10 @@ struct branch_handler_communication{
     sem_t sem_toNumClients;
     char recive_clients;
     char send_clients;
+};
+
+struct client_info{
+    int fd;
+    struct sockaddr_in client_addr;
+    time_t last_time_active;
 };

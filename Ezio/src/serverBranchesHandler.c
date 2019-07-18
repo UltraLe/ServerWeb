@@ -68,8 +68,6 @@ int create_new_branch()
     //giving the position of the array_hb that the branch will own
     char memAddr[5];
     memset(memAddr, 0, sizeof(memAddr));
-
-    printf("position: %d\n", pos);
     sprintf(memAddr, "%d", pos);
 
     if(!fork()){
@@ -139,6 +137,7 @@ int merge_branches(int pid_clientReciver, struct branch_handler_communication *r
                 //the sender information are situated in first position,
                 //the first position has to be moved
                 branches_info = *(current->next);
+                branches_info.prev = NULL;
             }
 
             free(current);
@@ -307,6 +306,12 @@ int main(int argc, char **argv) {
 
     if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &socket_opt, sizeof(socket_opt)) == -1) {
         perror("Error in setsockopt: ");
+        exit(-1);
+    }
+
+    //binding address
+    if(bind(listen_fd, (struct sockaddr *)&address, sizeof(address)) == -1){
+        perror("Error in bind: ");
         exit(-1);
     }
 
