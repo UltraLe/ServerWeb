@@ -5,6 +5,9 @@
 //function that checks the increasing/decreasing client connections
 void checkClientPercentage()
 {
+
+    //TODO edit nicenes according to active connections
+
     float old_perc, new_perc;
 
     //calculating 'OLD' percentage of connected clients

@@ -36,6 +36,9 @@ fd_set readSet, allSet;
 //functions that insert a new client into the connected client list
 int insert_new_client(int connect_fd, struct sockaddr_in clientAddress)
 {
+    if((*actual_clients) == MAX_CLI_PER_SB)
+        return -1;
+
     //inserting client into the last position (which has to be initialized)
     if(sem_wait(sem_cli) == -1){
         perror("Unable to sem_wait (insert_new_client): ");
@@ -46,9 +49,6 @@ int insert_new_client(int connect_fd, struct sockaddr_in clientAddress)
         perror("Unable to sem_post (insert_new_client): ");
         return -1;
     }
-
-    if((*actual_clients) == MAX_CLI_PER_SB)
-        return -1;
 
     //inserting client information into the client list
     (lastConnectedClient->client).fd = connect_fd;
@@ -154,6 +154,7 @@ int handleRequest(struct client_info client)
 
     if(FD_ISSET(client.fd, &readSet)){
 
+
         if((numByteRead = read(client.fd, readBuffer, sizeof(readBuffer))) == 0){
             //client has closed connection
             if(remove_client(client) == -1){
@@ -176,9 +177,20 @@ int handleRequest(struct client_info client)
             //TODO invio della risposta HTTP
             //TODO inserimento (eventuale) dell'immagine adattata in cache
         }
+
+        numSetsReady--;
     }
 
     return 0;
+}
+
+
+
+void clientStatus(int pos)
+{
+    printf("\nChild %d\n", pos);
+    for(struct client_list *current = &connectedClients; (current->client).fd != -1; current = current->next)
+        printf("Client fd: %d\n", (current->client).fd);
 }
 
 
@@ -268,7 +280,7 @@ int main(int argc, char **argv)
 
 
     ///here starts the main body of the server branch
-    int connect_fd;
+    int connect_fd, tryWaitRet;
 
     struct sockaddr_in acceptedClientAddress;
     socklen_t lenCliAddr;
@@ -286,9 +298,13 @@ int main(int argc, char **argv)
     //ready to serve clients
     while(1){
 
+        //resetting errno
+        errno = 0;
+
         //resetting readSet
         readSet = allSet;
 
+        //clientStatus(position);
         if((numSetsReady = (select(max_fd +1, &readSet, NULL, NULL, NULL))) == -1){
             perror("Error in select: ");
             exit(-1);
@@ -299,16 +315,16 @@ int main(int argc, char **argv)
         if(FD_ISSET(handler_info->listen_fd, &readSet) && (*actual_clients) != MAX_CLI_PER_SB) {
 
             //try to accept its connection
-            sem_trywait(&(handler_info->sem_toListenFd));
+            tryWaitRet = sem_trywait(&(handler_info->sem_toListenFd));
 
-            switch (errno) {
-                case EAGAIN:
-                    //do nothing, the semaphore has been already acquired
-                    break;
-                case -1:
-                    perror("Error in sem_trywait:");
-                    exit(-1);
+            if(errno == EAGAIN){
+                continue;
+            }else if(tryWaitRet == -1){
+                perror("Error in sem_trywait:");
+                exit(-1);
             }
+
+            printf("Child %d acquired semaphore\n", position);
 
             memset(&acceptedClientAddress, 0, sizeof(acceptedClientAddress));
 
@@ -319,19 +335,17 @@ int main(int argc, char **argv)
                 exit(-1);
             }
 
+            if (insert_new_client(connect_fd, acceptedClientAddress) == -1) {
+                printf("Cannot accept client, max capacity has been reached\n");
+            }
+
+            numSetsReady--;
 
             //posting the semaphore, once accepted the connection
             if (sem_post(&(handler_info->sem_toListenFd)) == -1) {
                 perror("Error in sem_post (sem_toListenFd): ");
                 exit(-1);
             }
-
-            if (insert_new_client(connect_fd, acceptedClientAddress) == -1) {
-                printf("Cannot accept client, max capacity has been reached\n");
-            }
-
-
-            numSetsReady--;
 
             //look for other descriptors
             if (numSetsReady <= 0)
@@ -341,15 +355,12 @@ int main(int argc, char **argv)
 
         for(struct client_list *current = &connectedClients; (current->client).fd != -1 && numSetsReady > 0;
                                                                                 current = current->next){
-
             if(handleRequest(current->client) == -1){
-                printf("Error: counld not handleRequest (main)\n");
+                printf("Error: could not handleRequest (main)\n");
                 continue;
             }
-
-            numSetsReady--;
         }
-
+        clientStatus(position);
         //request handled
     }
 }
