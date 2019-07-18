@@ -58,5 +58,7 @@ void checkClientPercentage()
         }
     }
 
+    printf("Percentage checked, old_perc: %f, new_perc: %f\n", old_perc, new_perc);
+
     //else dont do anything, the number of connected clients is stable
 }

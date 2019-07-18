@@ -36,6 +36,7 @@ fd_set readSet, allSet;
 //functions that insert a new client into the connected client list
 int insert_new_client(int connect_fd, struct sockaddr_in clientAddress)
 {
+    printf("Insertind FD\n");
     if((*actual_clients) == MAX_CLI_PER_SB)
         return -1;
 
@@ -73,6 +74,7 @@ int insert_new_client(int connect_fd, struct sockaddr_in clientAddress)
     if(abs(*(actual_clients)-lastClientNumWhenChecked) >= CHECK_PERC_EACH)
         checkClientPercentage();
 
+    printf("FD inserted\n");
     return 0;
 }
 
@@ -256,7 +258,7 @@ int main(int argc, char **argv)
     //setting up an AF_UNIX socket through with it
     //will recive the connections of another server branch
     if(signal(SIGUSR1, recive_clients) == SIG_ERR){
-        perror("Error in signal (SIGUSR1): ");
+        perror("Error in sigaction (SIGUSR1): ");
         exit(-1);
     }
 
@@ -265,14 +267,13 @@ int main(int argc, char **argv)
     //will send the connections to another server branch
     //and return when the operation is complete
     if(signal(SIGUSR2, send_clients) == SIG_ERR){
-        perror("Error in signal (SIGUSR2): ");
+        perror("Error in sigaction (SIGUSR2): ");
         exit(-1);
     }
 
-
     //setting up the cleaner
     if(signal(SIGALRM, clean) == SIG_ERR){
-        perror("Error in signal (clean): ");
+        perror("Error in sigaction (clean): ");
         exit(-1);
     }
     //starting its timer
@@ -306,6 +307,11 @@ int main(int argc, char **argv)
 
         //clientStatus(position);
         if((numSetsReady = (select(max_fd +1, &readSet, NULL, NULL, NULL))) == -1){
+
+            //may be interrubted by a signal
+            if(errno == EINTR)
+                continue;
+
             perror("Error in select: ");
             exit(-1);
         }

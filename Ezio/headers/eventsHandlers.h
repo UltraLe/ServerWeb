@@ -148,6 +148,8 @@ void send_clients()
 //function that close the connection of the inactive clients
 void clean()
 {
+    printf("Clener has just been called\n");
+
     //getting current time
     time_t now = time(0);
 
