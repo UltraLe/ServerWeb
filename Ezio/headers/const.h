@@ -23,7 +23,7 @@
 
 #include <semaphore.h>
 
-#define NUM_INIT_SB 2           //number of the server branches that will be always
+#define NUM_INIT_SB 1           //number of the server branches that will be always
                                 //ready to serve clients
 
 #define MAX_CLI_PER_SB 512      //number of clients that each server branch will handle

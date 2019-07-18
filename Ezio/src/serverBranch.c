@@ -146,6 +146,8 @@ int handleRequest(struct client_info client)
 
     char *writeBuffer;
 
+    printf("In handle\n");
+
     //USATO PER TEST RIMUOVERE
     char *http_header = "HTTP/1.1 200 OK\nVary: Accept-Encoding\nContent-Type: text/html\nAccept-Ranges: bytes\nLast-Modified: Mon, 17 Jul 2017 19:28:15 GMT\nContent-Length: 103\nDate: Sun, 14 Jul 2019 10:44:37 GMT\nServer: lighttpd/1.4.35";
     char *http_body = "\n\n<html><head><title>Benvenuto</title></head><body><div align=”center”>Hello World!</div></body></html>\n\n";
@@ -156,6 +158,7 @@ int handleRequest(struct client_info client)
 
     if(FD_ISSET(client.fd, &readSet)){
 
+        printf("Client found\n");
 
         if((numByteRead = read(client.fd, readBuffer, sizeof(readBuffer))) == 0){
             //client has closed connection
@@ -163,7 +166,12 @@ int handleRequest(struct client_info client)
                 printf("Error: could not remove the client (handleRequest)\n");
                 return -1;
             }
+        }else if(numByteRead == -1) {
+            perror("Error in read client information: ");
+            return -1;
         }else{
+
+            printf("Sending response\n");
 
             //USATA PER TEST
             if(writen(client.fd, http, strlen(http)) < 0){
@@ -182,7 +190,7 @@ int handleRequest(struct client_info client)
 
         numSetsReady--;
     }
-
+    printf("Hadle finished\n");
     return 0;
 }
 
@@ -366,6 +374,7 @@ int main(int argc, char **argv)
                 continue;
             }
         }
+        printf("After the last for\n");
         clientStatus(position);
         //request handled
     }

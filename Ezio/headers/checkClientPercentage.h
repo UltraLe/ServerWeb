@@ -6,6 +6,8 @@
 void checkClientPercentage()
 {
 
+    printf("Called percentage cecker\n");
+
     //TODO edit nicenes according to active connections
 
     float old_perc, new_perc;
