@@ -153,7 +153,7 @@ int merge_branches(int pid_clientReciver, struct branch_handler_communication *r
 
 
 
-void clients_has_changed(int  signum)
+void clients_has_changed()
 {
     //the 2 branches with less number of connected clients will be selected
     //and eventually used in merge_branches
@@ -234,7 +234,7 @@ void clients_has_changed(int  signum)
 
 
 int main(int argc, char **argv) {
-    int id_info, id_cache, id_hb;
+    int id_info, id_hb;
     pid_t my_pid;
     sem_t sem_tolistenfd, sem_trasfclients;
 
@@ -243,7 +243,7 @@ int main(int argc, char **argv) {
     int socket_opt = 1;
 
     //initializing cache address
-    if ((id_cache = shmget(IPC_CACHE_KEY, CACHE_BYTES, IPC_CREAT|0666)) == -1) {
+    if (shmget(IPC_CACHE_KEY, CACHE_BYTES, IPC_CREAT|0666) == -1) {
         perror("Error in shmget (cache): ");
         exit(-1);
     }
