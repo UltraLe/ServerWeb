@@ -121,7 +121,8 @@ void send_clients()
     ssize_t size;
 
     //sending file descriptors of the sockets
-    for(struct client_list *current = &connectedClients; (current->client).fd != -1; current = current->next){
+    for(struct client_list *current = firstConnectedClient; current != NULL; current = current->next){
+
         memset(fd_buff, 0, sizeof(fd_buff));
         sprintf(fd_buff, "%d", (current->client).fd);
         size = sock_fd_write(unixConnSock, fd_buff, strlen(fd_buff), (current->client).fd);
@@ -160,7 +161,7 @@ void clean()
 
     int time_diff;
 
-    for(struct client_list *current = &connectedClients; (current->client).fd != -1; current = current->next){
+    for(struct client_list *current = firstConnectedClient; current != NULL; current = current->next){
 
         //calculate difference between last time that a client was active and now
         time_diff = (current->client).last_time_active - now;

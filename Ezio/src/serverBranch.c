@@ -21,7 +21,7 @@ struct client_list{
 };
 
 struct handler_info *handler_info;
-struct client_list connectedClients;
+struct client_list *firstConnectedClient;
 struct client_list *lastConnectedClient;
 
 sem_t *sem_cli;
@@ -36,7 +36,8 @@ fd_set readSet, allSet;
 //functions that insert a new client into the connected client list
 int insert_new_client(int connect_fd, struct sockaddr_in clientAddress)
 {
-    printf("Insertind FD\n");
+    struct client_list *new_entry;
+
     if((*actual_clients) == MAX_CLI_PER_SB)
         return -1;
 
@@ -51,10 +52,16 @@ int insert_new_client(int connect_fd, struct sockaddr_in clientAddress)
         return -1;
     }
 
-    //inserting client information into the client list
-    (lastConnectedClient->client).fd = connect_fd;
-    (lastConnectedClient->client).client_addr = clientAddress;
-    (lastConnectedClient->client).last_time_active = time(0);
+    //inserting client information into the client list (last element)
+    if((new_entry = (struct client_list *)malloc(sizeof(struct client_list))) == NULL){
+        perror("Error in malloc (insert_new_client): ");
+        return -1;
+    }
+    memset(&(new_entry->client), 0, sizeof(struct client_info));
+
+    (new_entry->client).fd = connect_fd;
+    (new_entry->client).client_addr = clientAddress;
+    (new_entry->client).last_time_active = time(0);
 
     //inserting client into the set
     FD_SET(connect_fd, &allSet);
@@ -64,17 +71,30 @@ int insert_new_client(int connect_fd, struct sockaddr_in clientAddress)
     if(connect_fd > max_fd)
         max_fd = connect_fd;
 
-    //initializing next 'last' client element list
-    lastConnectedClient->next = (struct client_list*)malloc(sizeof(struct client_list));
-    (lastConnectedClient->next)->prev = lastConnectedClient;
+    //linking last element with previous
 
-    lastConnectedClient = lastConnectedClient->next;
-    (lastConnectedClient->client).fd = -1;
+    //if there are no client in the server branch
+    if(firstConnectedClient == NULL){
+        printf("This was the forst client\n");
+        firstConnectedClient = new_entry;
+        firstConnectedClient->prev = NULL;
+        firstConnectedClient->next = NULL;
+        lastConnectedClient = firstConnectedClient;
+    }else{
+        //if there are other clients
+        (lastConnectedClient->next) = new_entry;
+        new_entry->prev = lastConnectedClient;
+
+        lastConnectedClient = lastConnectedClient->next;
+        lastConnectedClient->next = NULL;
+
+        printf("This was NOT the forst client\n");
+    }
+
 
     if(abs(*(actual_clients)-lastClientNumWhenChecked) >= CHECK_PERC_EACH)
         checkClientPercentage();
 
-    printf("FD inserted\n");
     return 0;
 }
 
@@ -83,7 +103,7 @@ int insert_new_client(int connect_fd, struct sockaddr_in clientAddress)
 //function that close (and remove) a client connection
 int remove_client(struct client_info client)
 {
-    for(struct client_list *current = &connectedClients; (current->client).fd != -1; current = current->next){
+    for(struct client_list *current = firstConnectedClient; current != NULL; current = current->next){
 
         //removing client from connectedClient list
         if((current->client).fd == client.fd){
@@ -94,21 +114,31 @@ int remove_client(struct client_info client)
             }
 
             //remove client from allSet
+            printf("Removing %d\n", client.fd);
             FD_CLR(client.fd, &allSet);
 
-            (current->client).fd = -1;
+
+            //TODO check the handler too
             //if the element is the head of the list then
             //make the next element the new head list
             if(current->prev == NULL){
-                connectedClients = *(current->next);
-                connectedClients.prev = NULL;
+                printf("FD was the FIRST element of the list\n");
+                firstConnectedClient = current->next;
+                if(current->prev != NULL)
+                    firstConnectedClient->prev = NULL;
+
+            }else if(current->next == NULL){
+                printf("FD was the LAST element of the list\n");
+                lastConnectedClient = (current->prev);
+                (current->prev)->next = NULL;
             }else{
+                printf("FD was in the MIDDLE of the list\n");
                 (current->prev)->next = current->next;
             }
 
-            //free only if it is not the first element
-            if(current != &connectedClients)
-                free(current);
+            //free current
+            printf("Freeing FD\n");
+            free(current);
 
             if(sem_wait(sem_cli) == -1){
                 perror("Unable to sem_wait (insert_new_client): ");
@@ -143,22 +173,34 @@ int handleRequest(struct client_info client)
 {
     int numByteRead;
     char readBuffer[READ_BUFFER_BYTE];
+    memset(readBuffer, 0, sizeof(readBuffer));
 
     char *writeBuffer;
 
-    printf("In handle\n");
-
     //USATO PER TEST RIMUOVERE
-    char *http_header = "HTTP/1.1 200 OK\nVary: Accept-Encoding\nContent-Type: text/html\nAccept-Ranges: bytes\nLast-Modified: Mon, 17 Jul 2017 19:28:15 GMT\nContent-Length: 103\nDate: Sun, 14 Jul 2019 10:44:37 GMT\nServer: lighttpd/1.4.35";
-    char *http_body = "\n\n<html><head><title>Benvenuto</title></head><body><div align=”center”>Hello World!</div></body></html>\n\n";
+    char *http_header = "HTTP/1.1 200 OK\nVary: Accept-Encoding\nContent-Type: text/html\nAccept-Ranges: bytes\nLast-Modified: Mon, 17 Jul 2017 19:28:15 GMT\nContent-Length: 205\nDate: Sun, 14 Jul 2019 10:44:37 GMT\nServer: lighttpd/1.4.35";
+    char *http_body = "\n\n<!DOCTYPE html>\n"
+                      "<html>\n"
+                      "<body>\n"
+                      "<h1>Hello World !</h1>\n"
+                      "<p></p>\n"
+                      "<h1>Ciao Mondo !</h1>\n"
+                      "<p>(per Giovanni)</p>\n"
+                      "<h1>Bella Fra !</h1>\n"
+                      "<p>(per Riccardo)</p>\n"
+                      "<h1>UuuuoooOOoooo !</h1>\n"
+                      "<p>(per Ezio)</p>\n"
+                      "</body>\n"
+                      "</html>";
     char http[4096];
     strcat(http, http_header);
     strcat(http, http_body);
     //FINE ROBA DA TOGLIERE DOPO IL MERGE
 
-    if(FD_ISSET(client.fd, &readSet)){
+    //printf("clientfd: %d, address: %p\n", client.fd, &client);
+    //printf("FD_ISSET: %d\n", FD_ISSET(client.fd, &readSet));
 
-        printf("Client found\n");
+    if(FD_ISSET(client.fd, &readSet)){
 
         if((numByteRead = read(client.fd, readBuffer, sizeof(readBuffer))) == 0){
             //client has closed connection
@@ -171,13 +213,12 @@ int handleRequest(struct client_info client)
             return -1;
         }else{
 
-            printf("Sending response\n");
-
             //USATA PER TEST
             if(writen(client.fd, http, strlen(http)) < 0){
                 perror("Error in writen (unable to reply): ");
                 return -1;
             }
+
             //FINE ROBA DA TOGLIERE DOPO IL MERGE
 
             //TODO qui funzioni che gestiscono
@@ -186,11 +227,14 @@ int handleRequest(struct client_info client)
             //TODO accesso in cache per (eventualmente) prelevare l'immagine
             //TODO invio della risposta HTTP
             //TODO inserimento (eventuale) dell'immagine adattata in cache
+
+            //Updating client's last time active
+            client.last_time_active = time(0);
         }
 
         numSetsReady--;
     }
-    printf("Hadle finished\n");
+
     return 0;
 }
 
@@ -199,8 +243,9 @@ int handleRequest(struct client_info client)
 void clientStatus(int pos)
 {
     printf("\nChild %d\n", pos);
-    for(struct client_list *current = &connectedClients; (current->client).fd != -1; current = current->next)
+    for(struct client_list *current = firstConnectedClient; current != NULL; current = current->next) {
         printf("Client fd: %d\n", (current->client).fd);
+    }
 }
 
 
@@ -295,8 +340,8 @@ int main(int argc, char **argv)
     socklen_t lenCliAddr;
 
     //initializing client list
-    lastConnectedClient = &connectedClients;
-    (lastConnectedClient->client).fd = -1;
+    firstConnectedClient = NULL;
+    lastConnectedClient = firstConnectedClient;
 
     //initializing the set
     FD_ZERO(&allSet);
@@ -338,8 +383,6 @@ int main(int argc, char **argv)
                 exit(-1);
             }
 
-            printf("Child %d acquired semaphore\n", position);
-
             memset(&acceptedClientAddress, 0, sizeof(acceptedClientAddress));
 
             //if the branch is here he has to take care of the connection :)
@@ -349,17 +392,19 @@ int main(int argc, char **argv)
                 exit(-1);
             }
 
-            if (insert_new_client(connect_fd, acceptedClientAddress) == -1) {
-                printf("Cannot accept client, max capacity has been reached\n");
-            }
-
-            numSetsReady--;
-
             //posting the semaphore, once accepted the connection
             if (sem_post(&(handler_info->sem_toListenFd)) == -1) {
                 perror("Error in sem_post (sem_toListenFd): ");
                 exit(-1);
             }
+
+            if (insert_new_client(connect_fd, acceptedClientAddress) == -1) {
+                printf("Cannot accept client, max capacity has been reached\n");
+            }
+
+            printf("Inserted %d\n", connect_fd);
+
+            numSetsReady--;
 
             //look for other descriptors
             if (numSetsReady <= 0)
@@ -367,14 +412,17 @@ int main(int argc, char **argv)
 
         }
 
-        for(struct client_list *current = &connectedClients; (current->client).fd != -1 && numSetsReady > 0;
-                                                                                current = current->next){
+        for(struct client_list *current = firstConnectedClient; current != NULL && numSetsReady > 0; current = current->next){
+
+            //TODO this string save the server branch life, why ?
+            printf("fd: %d, address: %p\n", (current->client).fd, &(current->client));
+
             if(handleRequest(current->client) == -1){
                 printf("Error: could not handleRequest (main)\n");
                 continue;
             }
+
         }
-        printf("After the last for\n");
         clientStatus(position);
         //request handled
     }

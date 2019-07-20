@@ -14,7 +14,7 @@ struct branches_info_list{
     struct branches_info_list *prev;
 };
 
-struct branches_info_list branches_info;
+struct branches_info_list *first_branch_info;
 struct branches_info_list *last_branch_info;
 
 struct branch_handler_communication *array_hb;
@@ -37,24 +37,36 @@ int create_new_branch()
     ///filled with the information used by the server branch
     ///which we are going to create right now
 
+    struct branches_info_list *new_entry;
+
     //finding a position of the array_hb...
     int pos = look_for_first_array_pos();
 
-    //...and memorizing it into the information list
-    last_branch_info->info = (array_hb + pos);
-
-    //marking the pid in this memory as 'used' by simply giving to him  a value != -1
-    (last_branch_info->info)->branch_pid = 0;
-
-    //preparing the 'next' pointer
-    if((last_branch_info->next = mmap(NULL, sizeof(struct branches_info_list), PROT_READ|PROT_WRITE,
-                                         MAP_ANON|MAP_PRIVATE, 0, 0)) == (void *)-1){
-        perror("Unable to mmap (creating new entry in branches_info): ");
+    //preparing data for the new entry
+    if((new_entry = (struct branches_info_list *)malloc(sizeof(struct branches_info_list))) == NULL){
+        perror("Unable to malloc (creating new entry in branches_info): ");
         exit(-1);
     }
 
-    //linking the last element of the list
-    (last_branch_info->next)->prev = last_branch_info;
+    //...and memorizing it into the information list
+    new_entry->info = (array_hb + pos);
+
+    //marking the pid in this memory as 'used' by simply giving to him  a value != -1
+    (new_entry->info)->branch_pid = 0;
+
+    //linking the element in the list
+    if(first_branch_info == NULL){
+        first_branch_info = new_entry;
+        first_branch_info->prev = NULL;
+        first_branch_info->next = NULL;
+        last_branch_info = first_branch_info;
+    }else{
+        //if there are other server branches
+        last_branch_info->next = new_entry;
+        new_entry->prev = last_branch_info;
+        last_branch_info = last_branch_info->next;
+        last_branch_info->next = NULL;
+    }
 
     //when the branches handler has to check the global number of client
     //connected, it has to wait for this semaphore for each branch
@@ -77,9 +89,6 @@ int create_new_branch()
     }
 
     actual_branches_num++;
-
-    //setting to the next element of the list
-    last_branch_info = last_branch_info->next;
 
     printf("\t\t\tNew server branch generated\n");
 
@@ -125,24 +134,27 @@ int merge_branches(int pid_clientReciver, struct branch_handler_communication *r
     printf("Clients of process '%d' were transmitted to process '%d'\n", pid_clientSender, pid_clientReciver);
 
     //removing sender branch information from the structure branches_info
-    for(struct branches_info_list *current = &branches_info; ; current = current->next){
+    for(struct branches_info_list *current = first_branch_info; ; current = current->next){
 
         if(current->info == sender_addr) {
 
+            //marking as 'usable' the struct in shared memory (IPC)
             (current->info)->branch_pid = -1;
 
-            if (current->prev != NULL) {
+            if(current->prev == NULL){
+                //if the information were stored in the first element of the list
+                first_branch_info = current->next;
+                first_branch_info->prev = NULL;
+            }else if(current->next == NULL){
+                //if the information were stored in the last position of the list
+                last_branch_info = current->prev;
+                last_branch_info->next = NULL;
+            }else{
                 (current->prev)->next = current->next;
-            } else {
-                //the sender information are situated in first position,
-                //the first position has to be moved
-                branches_info = *(current->next);
-                branches_info.prev = NULL;
             }
 
-            //free only if it is not the first element
-            if(current != &branches_info)
-                free(current);
+            free(current);
+
             break;
         }
 
@@ -170,7 +182,7 @@ void clients_has_changed()
     int temp;
 
     //looking for the number of ALL the connected clients
-    for(struct branches_info_list *current = &branches_info; (current->info)->branch_pid != -1; current = current->next){
+    for(struct branches_info_list *current = first_branch_info; current != NULL; current = current->next){
 
         if(sem_wait(&((current->info)->sem_toNumClients)) == -1){
             perror("Error in sem_wait (on counting connected clients): ");
@@ -339,7 +351,8 @@ int main(int argc, char **argv) {
     }
 
     //initializing the list of branches
-    last_branch_info = &branches_info;
+    first_branch_info = NULL;
+    last_branch_info = first_branch_info;
 
     //initializing the array. Operation needed to distinguish
     //free positions

@@ -23,7 +23,7 @@
 
 #include <semaphore.h>
 
-#define NUM_INIT_SB 1           //number of the server branches that will be always
+#define NUM_INIT_SB 3           //number of the server branches that will be always
                                 //ready to serve clients
 
 #define MAX_CLI_PER_SB 512      //number of clients that each server branch will handle
@@ -31,7 +31,7 @@
 #define CLEANER_CHECK_SEC 120   //number of seconds after which a cleaner will check for
                                 //idle client, and close their connection
 
-#define MAX_IDLE_TIME 120       //number of seconds after which will be closed a connection
+#define MAX_IDLE_TIME 90        //number of seconds after which will be closed a connection
                                 //of an idle client
 
 #define NEW_SB_PERC 0.8         //when the percentage of the (total) connected clients is grater
