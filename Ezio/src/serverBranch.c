@@ -118,7 +118,8 @@ int remove_client(struct client_info client)
             FD_CLR(client.fd, &allSet);
 
 
-            //TODO check the handler too
+            //handling the list of clients
+
             //if the element is the head of the list then
             //make the next element the new head list
             if(current->prev == NULL){
@@ -210,6 +211,10 @@ int handleRequest(struct client_info client)
             }
         }else if(numByteRead == -1) {
             perror("Error in read client information: ");
+            //TODO handle resetting connection requested by peers
+
+            remove_client(client);
+
             return -1;
         }else{
 
@@ -414,8 +419,8 @@ int main(int argc, char **argv)
 
         for(struct client_list *current = firstConnectedClient; current != NULL && numSetsReady > 0; current = current->next){
 
-            //TODO this string save the server branch life, why ?
-            printf("fd: %d, address: %p\n", (current->client).fd, &(current->client));
+            //TODO this string save the server branch life, why ? solved
+            //printf("fd: %d, address: %p\n", (current->client).fd, &(current->client));
 
             if(handleRequest(current->client) == -1){
                 printf("Error: could not handleRequest (main)\n");
