@@ -15,7 +15,9 @@ void checkClientPercentage()
     //calculating 'OLD' percentage of connected clients
     old_perc = (float)(lastClientNumWhenChecked*100)/MAX_CLI_PER_SB;
 
-    if (0 <= old_perc < SIGNAL_PERC1*100) {
+    printf("lastClientNum: %d, old_perc: %f\n", lastClientNumWhenChecked, old_perc);
+
+    if (0 <= old_perc && old_perc < SIGNAL_PERC1*100) {
         old_perc = 1;
     }else if(SIGNAL_PERC1*100 <= old_perc && old_perc < SIGNAL_PERC2*100) {
         old_perc = 2;
@@ -36,7 +38,7 @@ void checkClientPercentage()
     //calculating 'NEW' (actual) percentage of connected clients
     new_perc = (float)(lastClientNumWhenChecked*100)/MAX_CLI_PER_SB;
 
-    if (0 <= new_perc < SIGNAL_PERC1*100) {
+    if (0 <= new_perc && new_perc < SIGNAL_PERC1*100) {
         new_perc = 1;
     }else if(SIGNAL_PERC1*100 <= new_perc && new_perc < SIGNAL_PERC2*100) {
         new_perc = 2;

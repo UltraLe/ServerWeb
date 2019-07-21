@@ -92,6 +92,8 @@ int insert_new_client(int connect_fd, struct sockaddr_in clientAddress)
     }
 
 
+    printf("Active clients: %d, difference between last time checked(%d): %d\n", *(actual_clients), lastClientNumWhenChecked,
+           abs(*(actual_clients)-lastClientNumWhenChecked));
     if(abs(*(actual_clients)-lastClientNumWhenChecked) >= CHECK_PERC_EACH)
         checkClientPercentage();
 

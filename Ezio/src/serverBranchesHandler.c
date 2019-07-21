@@ -198,6 +198,8 @@ void clients_has_changed()
             exit(-1);
         }
 
+        printf("Server branch active clients: %d\n", temp);
+
         //TODO test
         connectedClients += temp;
 
@@ -215,12 +217,10 @@ void clients_has_changed()
         }
     }
 
-    printf("Number of actual active connections: %d\n", connectedClients);
+    //NUM_INIT_SB should never be less than 2, or
+    //this logic does not work anymore.
 
-    if(min + veryMin > MAX_CLI_PER_SB){
-        printf("Something went wrong, unexpected values of\nmin: %d, veryMin: %d\n", min, veryMin);
-        exit(-1);
-    }
+    printf("Number of actual active connections: %d\n", connectedClients);
 
     //if connected clients are grater than the 80% of acceptable clients then
     //create a new branch,
@@ -239,10 +239,12 @@ void clients_has_changed()
 
         //reciver is the minPidClient
         //sender is the veryMinClient
+        printf("Merging between sender %d, and reciver %d\n", minPid, veryMin);
         if(merge_branches(minPid, minAddr, veryMinPid, veryMinAddr)){
             printf("Error in merge_branches\n");
             exit(-1);
         }
+        printf("Merge ended, actual_branches_num: %d\n", actual_branches_num);
 
     }
 }
@@ -364,7 +366,7 @@ int main(int argc, char **argv) {
     }
     printf("Shared memory initialized\n");
 
-    printf("CHK_PERC_EACH: %f\n", CHECK_PERC_EACH);
+    printf("CHK_PERC_EACH: %d\n", CHECK_PERC_EACH);
 
     //generating the initial server branches
     for(int i = 0; i < NUM_INIT_SB; ++i) {
@@ -375,7 +377,6 @@ int main(int argc, char **argv) {
     }
 
     //waiting for signals to come
-    pause();
-
-    printf("\t\t\tWARNING !!!\nServer branches handler has just returned\n");
+    while(1)
+        pause();
 }

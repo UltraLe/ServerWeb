@@ -23,10 +23,10 @@
 
 #include <semaphore.h>
 
-#define NUM_INIT_SB 1           //number of the server branches that will be always
+#define NUM_INIT_SB 2           //number of the server branches that will be always
                                 //ready to serve clients
 
-#define MAX_CLI_PER_SB 10       //number of clients that each server branch will handle (512)
+#define MAX_CLI_PER_SB 10      //number of clients that each server branch will handle (512)
 
 #define CLEANER_CHECK_SEC 120   //number of seconds after which a cleaner will check for
                                 //idle client, and close their connection (120)
@@ -60,8 +60,8 @@
 
 #define MAX_BRANCHES 10000      //used to initialize the memory described up above
 
-#define CHECK_PERC_EACH 100*((float)0.02*MAX_CLI_PER_SB)      //check the increasing/decreasing client number (of a server breanch)
-                                                              //every abs(CHECK_PER_EACH) connection recived/closed
+#define CHECK_PERC_EACH 1      //check the increasing/decreasing client number (of a server breanch)
+                                //every abs(CHECK_PER_EACH) connection recived/closed
 
 #define SERVER_PORT 1033
 
