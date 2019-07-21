@@ -145,12 +145,14 @@ int merge_branches(int pid_clientReciver, struct branch_handler_communication *r
                 //if the information were stored in the first element of the list
                 first_branch_info = current->next;
                 first_branch_info->prev = NULL;
+
             }else if(current->next == NULL){
                 //if the information were stored in the last position of the list
                 last_branch_info = current->prev;
                 last_branch_info->next = NULL;
             }else{
                 (current->prev)->next = current->next;
+                (current->next)->prev = current->prev;
             }
 
             free(current);
@@ -361,6 +363,8 @@ int main(int argc, char **argv) {
         (array_hb +i)->branch_pid = -1;
     }
     printf("Shared memory initialized\n");
+
+    printf("CHK_PERC_EACH: %f\n", CHECK_PERC_EACH);
 
     //generating the initial server branches
     for(int i = 0; i < NUM_INIT_SB; ++i) {

@@ -75,7 +75,7 @@ int insert_new_client(int connect_fd, struct sockaddr_in clientAddress)
 
     //if there are no client in the server branch
     if(firstConnectedClient == NULL){
-        printf("This was the forst client\n");
+        printf("This was the first client\n");
         firstConnectedClient = new_entry;
         firstConnectedClient->prev = NULL;
         firstConnectedClient->next = NULL;
@@ -88,7 +88,7 @@ int insert_new_client(int connect_fd, struct sockaddr_in clientAddress)
         lastConnectedClient = lastConnectedClient->next;
         lastConnectedClient->next = NULL;
 
-        printf("This was NOT the forst client\n");
+        printf("This was NOT the first client\n");
     }
 
 
@@ -122,20 +122,22 @@ int remove_client(struct client_info client)
 
             //if the element is the head of the list then
             //make the next element the new head list
-            if(current->prev == NULL){
+            if((current->prev) == NULL){
                 printf("FD was the FIRST element of the list\n");
                 firstConnectedClient = current->next;
 
                 if(firstConnectedClient != NULL)
                     firstConnectedClient->prev = NULL;
 
-            }else if(current->next == NULL){
+            }else if((current->next) == NULL){
+
                 printf("FD was the LAST element of the list\n");
                 lastConnectedClient = (current->prev);
-                (current->prev)->next = NULL;
+                (lastConnectedClient->next) = NULL;
             }else{
                 printf("FD was in the MIDDLE of the list\n");
-                (current->prev)->next = current->next;
+                ((current->prev)->next) = (current->next);
+                (current->next)->prev = current->prev;
             }
 
             //free current
@@ -409,11 +411,15 @@ int main(int argc, char **argv)
 
             numSetsReady--;
 
-            //look for other descriptors
-            if (numSetsReady <= 0)
-                continue;
-
+        }else if(FD_ISSET(handler_info->listen_fd, &readSet) && (*actual_clients) == MAX_CLI_PER_SB){
+            //if the server branch acquired the semaphore to accept a new client,
+            //but it reaches the max capacity, ignore the connection request
+            numSetsReady--;
         }
+
+        //look for other descriptors
+        if (numSetsReady <= 0)
+            continue;
 
         for(struct client_list *current = firstConnectedClient; current != NULL && numSetsReady > 0; current = current->next){
 
@@ -428,6 +434,7 @@ int main(int argc, char **argv)
 
         }
         clientStatus(position);
+        //sleep(1);
         //request handled
     }
 }
