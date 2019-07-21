@@ -125,7 +125,8 @@ int remove_client(struct client_info client)
             if(current->prev == NULL){
                 printf("FD was the FIRST element of the list\n");
                 firstConnectedClient = current->next;
-                if(current->prev != NULL)
+
+                if(firstConnectedClient != NULL)
                     firstConnectedClient->prev = NULL;
 
             }else if(current->next == NULL){
@@ -179,7 +180,7 @@ int handleRequest(struct client_info client)
     char *writeBuffer;
 
     //USATO PER TEST RIMUOVERE
-    char *http_header = "HTTP/1.1 200 OK\nVary: Accept-Encoding\nContent-Type: text/html\nAccept-Ranges: bytes\nLast-Modified: Mon, 17 Jul 2017 19:28:15 GMT\nContent-Length: 205\nDate: Sun, 14 Jul 2019 10:44:37 GMT\nServer: lighttpd/1.4.35";
+    char *http_header = "HTTP/1.1 200 OK\nVary: Accept-Encoding\nContent-Type: text/html\nAccept-Ranges: bytes\nLast-Modified: Mon, 17 Jul 2017 19:28:15 GMT\nContent-Length: 180\nDate: Sun, 14 Jul 2019 10:44:37 GMT\nServer: lighttpd/1.4.35";
     char *http_body = "\n\n<!DOCTYPE html>\n"
                       "<html>\n"
                       "<body>\n"
@@ -193,6 +194,7 @@ int handleRequest(struct client_info client)
                       "<p>(per Ezio)</p>\n"
                       "</body>\n"
                       "</html>";
+
     char http[4096];
     strcat(http, http_header);
     strcat(http, http_body);
@@ -211,6 +213,7 @@ int handleRequest(struct client_info client)
             }
         }else if(numByteRead == -1) {
             perror("Error in read client information: ");
+
             //TODO handle resetting connection requested by peers
 
             remove_client(client);
@@ -420,10 +423,11 @@ int main(int argc, char **argv)
         for(struct client_list *current = firstConnectedClient; current != NULL && numSetsReady > 0; current = current->next){
 
             //TODO this string save the server branch life, why ? solved
-            //printf("fd: %d, address: %p\n", (current->client).fd, &(current->client));
+            printf("fd: %d, address: %p\n", (current->client).fd, &(current->client));
 
             if(handleRequest(current->client) == -1){
                 printf("Error: could not handleRequest (main)\n");
+                numSetsReady--;
                 continue;
             }
 
