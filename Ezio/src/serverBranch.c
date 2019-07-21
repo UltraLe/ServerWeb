@@ -171,7 +171,7 @@ int remove_client(struct client_info client)
 
 
 //function that handles a client HTTP request
-int handleRequest(struct client_info client)
+int handleRequest(struct client_info *client)
 {
     int numByteRead;
     char readBuffer[READ_BUFFER_BYTE];
@@ -200,14 +200,11 @@ int handleRequest(struct client_info client)
     strcat(http, http_body);
     //FINE ROBA DA TOGLIERE DOPO IL MERGE
 
-    //printf("clientfd: %d, address: %p\n", client.fd, &client);
-    //printf("FD_ISSET: %d\n", FD_ISSET(client.fd, &readSet));
+    if(FD_ISSET(client->fd, &readSet)){
 
-    if(FD_ISSET(client.fd, &readSet)){
-
-        if((numByteRead = read(client.fd, readBuffer, sizeof(readBuffer))) == 0){
+        if((numByteRead = read(client->fd, readBuffer, sizeof(readBuffer))) == 0){
             //client has closed connection
-            if(remove_client(client) == -1){
+            if(remove_client(*client) == -1){
                 printf("Error: could not remove the client (handleRequest)\n");
                 return -1;
             }
@@ -216,13 +213,16 @@ int handleRequest(struct client_info client)
 
             //TODO handle resetting connection requested by peers
 
-            remove_client(client);
+            remove_client(*client);
 
             return -1;
         }else{
 
+            //Updating client's last time active
+            client->last_time_active = time(0);
+
             //USATA PER TEST
-            if(writen(client.fd, http, strlen(http)) < 0){
+            if(writen(client->fd, http, strlen(http)) < 0){
                 perror("Error in writen (unable to reply): ");
                 return -1;
             }
@@ -235,9 +235,6 @@ int handleRequest(struct client_info client)
             //TODO accesso in cache per (eventualmente) prelevare l'immagine
             //TODO invio della risposta HTTP
             //TODO inserimento (eventuale) dell'immagine adattata in cache
-
-            //Updating client's last time active
-            client.last_time_active = time(0);
         }
 
         numSetsReady--;
@@ -410,8 +407,6 @@ int main(int argc, char **argv)
                 printf("Cannot accept client, max capacity has been reached\n");
             }
 
-            printf("Inserted %d\n", connect_fd);
-
             numSetsReady--;
 
             //look for other descriptors
@@ -425,7 +420,7 @@ int main(int argc, char **argv)
             //TODO this string save the server branch life, why ? solved
             printf("fd: %d, address: %p\n", (current->client).fd, &(current->client));
 
-            if(handleRequest(current->client) == -1){
+            if(handleRequest(&(current->client)) == -1){
                 printf("Error: could not handleRequest (main)\n");
                 numSetsReady--;
                 continue;

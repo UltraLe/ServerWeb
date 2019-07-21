@@ -28,11 +28,11 @@
 
 #define MAX_CLI_PER_SB 512      //number of clients that each server branch will handle
 
-#define CLEANER_CHECK_SEC 120   //number of seconds after which a cleaner will check for
-                                //idle client, and close their connection
+#define CLEANER_CHECK_SEC 15   //number of seconds after which a cleaner will check for
+                                //idle client, and close their connection (120)
 
-#define MAX_IDLE_TIME 90        //number of seconds after which will be closed a connection
-                                //of an idle client
+#define MAX_IDLE_TIME 10        //number of seconds after which will be closed a connection
+                                //of an idle client (90)
 
 #define NEW_SB_PERC 0.8         //when the percentage of the (total) connected clients is grater
                                 //than this percentage, a new server branch is created

@@ -26,6 +26,8 @@ void recive_clients()
         unlink(socket_path);
     }
 
+    //TODO CONNECT RETRY
+
     //connecting to the 'sender of clients'
     if(connect(unixSock_fd, (struct sockaddr*)&addr, sizeof(addr)) == -1){
         perror("Error in accept (unix socket): ");
@@ -164,15 +166,17 @@ void clean()
     for(struct client_list *current = firstConnectedClient; current != NULL; current = current->next){
 
         //calculate difference between last time that a client was active and now
-        time_diff = (current->client).last_time_active - now;
+        time_diff = now - (current->client).last_time_active;
 
         //if the client have been inactive for MAX_IDLE_TIME seconds, then colse its connection
-        if(time_diff >= MAX_IDLE_TIME)
-            if(remove_client(current->client) == -1){
+        if(time_diff >= MAX_IDLE_TIME) {
+
+            if (remove_client(current->client) == -1) {
                 printf("Error: could not remove the client (clean)\n");
                 return;
             }
 
+        }
     }
 
     //restarting the timer fot the next cleaning operation
