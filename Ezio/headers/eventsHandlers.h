@@ -7,6 +7,12 @@
 //function that recive the client connection from a server branch
 void recive_clients()
 {
+    //waiting for se sender to create and listen on the unix socket
+    if(sem_wait(&(handler_info->sem_sendRecive)) == -1){
+        perror("Error in sem_post (recive_clients)");
+        exit(-1);
+    }
+
     //unix addres type
     struct sockaddr_un addr;
     int unixSock_fd;
@@ -30,19 +36,10 @@ void recive_clients()
         unlink(socket_path);
     }
 
-    //TODO BETTER CONNECT RETRY
-    for(int i = 0; i < NUM_RETRIES; ++i) {
-        //connecting to the 'sender of clients'
-        if (connect(unixSock_fd, (struct sockaddr *) &addr, sizeof(addr)) == -1) {
-            perror("Error in connect (unix socket)");
-            //if connection has been refused (because sender didnt open the connection yet)
-            //sleep and then retry
-            sleep(1);
-        }else{
-            break;
-        }
+    if (connect(unixSock_fd, (struct sockaddr *) &addr, sizeof(addr)) == -1) {
+        perror("Error in connect (unix socket)");
+        exit(-1);
     }
-
 
     char fd_buff[10];
     int fileDescriptorRecived;
@@ -55,7 +52,7 @@ void recive_clients()
         memset(&clientAddress,0, sizeof(clientAddress));
 
         if((size_read = sock_fd_read(unixSock_fd, fd_buff, sizeof(fd_buff), &fileDescriptorRecived)) < 0){
-            perror("Error in sock_fd_read: ");
+            perror("Error in sock_fd_read");
             exit(-1);
         }else if (size_read == 0){
             //break if the sender closes connection,
@@ -66,7 +63,7 @@ void recive_clients()
         //getting the address of the client recived
         socklen_t len;
         if(getsockname(fileDescriptorRecived, (struct sockaddr *)&clientAddress, &len) == -1){
-            perror("Error in getsockname: ");
+            perror("Error in getsockname");
             exit(-1);
         }
 
@@ -79,11 +76,16 @@ void recive_clients()
 
     //giving the OK to the handler
     if(sem_post(&(handler_info->sem_transfClients)) == -1){
-        perror("Error in sem_post (send_clients): ");
+        perror("Error in sem_post (recive_clients)");
         return;
     }
 
-    printf("Recived all clints\n");
+    if(close(unixSock_fd) == -1){
+        perror("Error in close(recive_clients)");
+        exit(-1);
+    }
+
+    printf("Recived all clients\n");
 }
 
 
@@ -124,6 +126,12 @@ void send_clients()
         return;
     }
 
+    //giving the OK to the handler
+    if(sem_post(&(handler_info->sem_sendRecive)) == -1){
+        perror("Error in sem_post (send_clients): ");
+        return;
+    }
+
     //waiting for the 'reciver of clients'
     if((unixConnSock = accept(unixSock_fd, NULL, NULL)) == -1){
         perror("Error in accept (unix socket): ");
@@ -153,6 +161,14 @@ void send_clients()
     }
 
     printf("Sent all clients\n");
+    if(close(unixConnSock) == -1){
+        perror("Error in close connection unix socket (send_clients)");
+        exit(-1);
+    }
+    if(close(unixSock_fd) == -1){
+        perror("Error in close listening unix socket (send_clients)");
+        exit(-1);
+    }
 
     //branches dies
     exit(0);

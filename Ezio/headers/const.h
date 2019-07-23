@@ -31,7 +31,7 @@
 #define CLEANER_CHECK_SEC 120   //number of seconds after which a cleaner will check for
                                 //idle client, and close their connection (120)
 
-#define MAX_IDLE_TIME 90        //number of seconds after which will be closed a connection
+#define MAX_IDLE_TIME 900        //number of seconds after which will be closed a connection
                                 //of an idle client (90)
 
 #define NEW_SB_PERC 0.8         //when the percentage of the (total) connected clients is grater
@@ -75,6 +75,7 @@ char *socket_path = "\0hidden"; //strings that identifies the AF_UNIX socket
 struct handler_info{
     pid_t pid;
     int listen_fd;
+    sem_t sem_sendRecive;
     sem_t sem_toListenFd;
     sem_t sem_transfClients;
 };

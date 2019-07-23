@@ -20,6 +20,31 @@ struct branches_info_list *last_branch_info;
 struct branch_handler_communication *array_hb;
 
 
+
+void branchesStatus()
+{
+    int temp;
+
+    for(struct branches_info_list *current = first_branch_info; current != NULL; current = current->next){
+
+        if(sem_wait(&((current->info)->sem_toNumClients)) == -1){
+            perror("Error in sem_wait (on counting connected clients): ");
+            exit(-1);
+        }
+
+        temp = (current->info)->active_clients;
+
+        if(sem_post(&((current->info)->sem_toNumClients)) == -1){
+            perror("Error in sem_post (on counting connected clients): ");
+            exit(-1);
+        }
+
+        printf("Server branch with pid: %d has %d clients\n", (current->info)->branch_pid, temp);
+    }
+}
+
+
+
 int look_for_first_array_pos()
 {
     for(int i = 0; i < actual_branches_num+1; ++i){
@@ -41,6 +66,8 @@ int create_new_branch()
 
     //finding a position of the array_hb...
     int pos = look_for_first_array_pos();
+    
+    printf("\n\nFound %d POSITION\n\n", pos);
 
     //preparing data for the new entry
     if((new_entry = (struct branches_info_list *)malloc(sizeof(struct branches_info_list))) == NULL){
@@ -250,6 +277,8 @@ void clients_has_changed()
         printf("Merge ended, actual_branches_num: %d\n", actual_branches_num);
 
     }
+
+    branchesStatus();
 }
 
 
@@ -257,7 +286,7 @@ void clients_has_changed()
 int main(int argc, char **argv) {
     int id_info, id_hb;
     pid_t my_pid;
-    sem_t sem_tolistenfd, sem_trasfclients;
+    sem_t sem_tolistenfd, sem_trasfclients, sem_sendrecive;
 
     int listen_fd;
     struct sockaddr_in address;
@@ -312,6 +341,15 @@ int main(int argc, char **argv) {
         exit(-1);
     }
 
+    //initislizing semaphore used to syncronize sender and reciver during
+    //the transmission of the clients from a brench server to the other.
+    //the reciver will wait this semaphore until the sender has created
+    //the unix socket used to transfer clients
+    if (sem_init(&sem_sendrecive, 1, 0) == -1) {
+        perror("Error in sem_init (sem_sendrecive): ");
+        exit(-1);
+    }
+
     //initializing listening socket
     memset(&address, 0, sizeof(address));
     address.sin_addr.s_addr = htonl(SERVER_ADDR);
@@ -348,6 +386,7 @@ int main(int argc, char **argv) {
     info->listen_fd = listen_fd;
     info->sem_toListenFd = sem_tolistenfd;
     info->sem_transfClients = sem_trasfclients;
+    info->sem_sendRecive = sem_sendrecive;
 
     //when the number of the active clients of a branch get to the 10%, 50% and 80%
     //of MAX_CLI_PER_SB, it signals the creator with SIGUSR1.
