@@ -110,15 +110,18 @@ int merge_branches(int pid_clientReciver, struct branch_handler_communication *r
     sender_addr->send_clients = (char)1;
     sender_addr->recive_clients = (char)0;
 
-    if(kill(pid_clientReciver, SIGUSR1) == -1){
-        perror("Error in kill (SIGUSR1) the 'reciver': ");
-        exit(-1);
-    }
-
+    //sender has to open the conneciton
     if(kill(pid_clientSender, SIGUSR2) == -1){
         perror("Error in kill (SIGUSR2) the 'sender': ");
         exit(-1);
     }
+    printf("Sent SIGUSR2 to %d\n", pid_clientSender);
+
+    if(kill(pid_clientReciver, SIGUSR1) == -1){
+        perror("Error in kill (SIGUSR1) the 'reciver': ");
+        exit(-1);
+    }
+    printf("Sent SIGUSR1 to %d\n", pid_clientReciver);
 
     //waiting that both the reciver and transmitter
     //has finished to transmit connections (file descriptor)
@@ -239,7 +242,7 @@ void clients_has_changed()
 
         //reciver is the minPidClient
         //sender is the veryMinClient
-        printf("Merging between sender %d, and reciver %d\n", minPid, veryMin);
+        printf("Merging between sender %d, and reciver %d\n", veryMinPid, minPid);
         if(merge_branches(minPid, minAddr, veryMinPid, veryMinAddr)){
             printf("Error in merge_branches\n");
             exit(-1);

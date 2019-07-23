@@ -251,7 +251,7 @@ int handleRequest(struct client_info *client)
 
 void clientStatus(int pos)
 {
-    printf("\nChild %d\n", pos);
+    printf("\nChild %d, pid %d\n", pos, getpid());
     for(struct client_list *current = firstConnectedClient; current != NULL; current = current->next) {
         printf("Client fd: %d\n", (current->client).fd);
     }
@@ -285,6 +285,8 @@ int main(int argc, char **argv)
 
     //going to the correct position of the ''array''
     talkToHandler += position;
+
+    printf("Server branch with pid %d ready\n", getpid());
 
     //initializing data which will be used to talk with the handler
     actual_clients = &(talkToHandler->active_clients);
@@ -320,7 +322,7 @@ int main(int argc, char **argv)
     //setting up an AF_UNIX socket through with it
     //will recive the connections of another server branch
     if(signal(SIGUSR1, recive_clients) == SIG_ERR){
-        perror("Error in sigaction (SIGUSR1): ");
+        perror("Error in signal (SIGUSR1): ");
         exit(-1);
     }
 
@@ -329,7 +331,7 @@ int main(int argc, char **argv)
     //will send the connections to another server branch
     //and return when the operation is complete
     if(signal(SIGUSR2, send_clients) == SIG_ERR){
-        perror("Error in sigaction (SIGUSR2): ");
+        perror("Error in signal (SIGUSR2): ");
         exit(-1);
     }
 

@@ -11,6 +11,10 @@ void recive_clients()
     struct sockaddr_un addr;
     int unixSock_fd;
 
+    int NUM_RETRIES = 3;
+
+    printf("Server branch %d reciving clients\n", getpid());
+
     if((unixSock_fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1){
         perror("Unable to create unix socket: ");
         return;
@@ -26,13 +30,19 @@ void recive_clients()
         unlink(socket_path);
     }
 
-    //TODO CONNECT RETRY
-
-    //connecting to the 'sender of clients'
-    if(connect(unixSock_fd, (struct sockaddr*)&addr, sizeof(addr)) == -1){
-        perror("Error in accept (unix socket): ");
-        return;
+    //TODO BETTER CONNECT RETRY
+    for(int i = 0; i < NUM_RETRIES; ++i) {
+        //connecting to the 'sender of clients'
+        if (connect(unixSock_fd, (struct sockaddr *) &addr, sizeof(addr)) == -1) {
+            perror("Error in connect (unix socket)");
+            //if connection has been refused (because sender didnt open the connection yet)
+            //sleep and then retry
+            sleep(1);
+        }else{
+            break;
+        }
     }
+
 
     char fd_buff[10];
     int fileDescriptorRecived;
@@ -73,8 +83,7 @@ void recive_clients()
         return;
     }
 
-    //branches dies
-    exit(0);
+    printf("Recived all clints\n");
 }
 
 
@@ -86,6 +95,8 @@ void send_clients()
     //unix addres type
     struct sockaddr_un addr;
     int unixSock_fd, unixConnSock;
+
+    printf("Server branch %d sending clients\n", getpid());
 
     if((unixSock_fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1){
         perror("Unable to create unix socket: ");
@@ -140,6 +151,8 @@ void send_clients()
         perror("Error in sem_post (send_clients): ");
         return;
     }
+
+    printf("Sent all clients\n");
 
     //branches dies
     exit(0);
