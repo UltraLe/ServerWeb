@@ -83,7 +83,7 @@ int create_new_branch()
     //finding a position of the array_hb...
     int pos = look_for_first_array_pos();
     
-    printf("\n\nFound %d POSITION\n\n", pos);
+    printf("\n\nFound %d POSITION, giving from (array+pos): %p to (attay+pos+1): %p\n\n", pos, array_hb+pos, array_hb+pos+1);
 
     //preparing data for the new entry
     if((new_entry = (struct branches_info_list *)malloc(sizeof(struct branches_info_list))) == NULL){
@@ -93,6 +93,8 @@ int create_new_branch()
 
     //...and memorizing it into the information list
     new_entry->info = (array_hb + pos);
+
+    memset(new_entry->info, 0, sizeof(struct branch_handler_communication));
 
     //marking the pid in this memory as 'used' by simply giving to him  a value != -1
     (new_entry->info)->branch_pid = 0;
@@ -252,7 +254,6 @@ void clients_has_changed()
             exit(-1);
         }
 
-        //TODO test
         connectedClients += temp;
 
         if(temp < veryMin ) {
@@ -335,7 +336,7 @@ int main(int argc, char **argv) {
 
     //attaching the memory starting from array_hb. This way we can see this memory
     //as it was an array_hb[MAX_BRANCHES].
-    if ((array_hb = shmat(id_hb, array_hb, SHM_R | SHM_W)) == (void *) -1) {
+    if ((array_hb = shmat(id_hb, NULL, SHM_R | SHM_W)) == (void *) -1) {
         perror("Error in shmat (array_hb): ");
         exit(-1);
     }

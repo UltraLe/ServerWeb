@@ -38,6 +38,9 @@ fd_set readSet, allSet;
 //functions that insert a new client into the connected client list
 int insert_new_client(int connect_fd, struct sockaddr_in clientAddress)
 {
+    printf("\tServer branch with pid %d inserting client...\n", getpid());
+
+
     struct client_list *new_entry;
 
     if((*actual_clients) == MAX_CLI_PER_SB)
@@ -77,7 +80,6 @@ int insert_new_client(int connect_fd, struct sockaddr_in clientAddress)
 
     //if there are no client in the server branch
     if(firstConnectedClient == NULL){
-        printf("This was the first client\n");
         firstConnectedClient = new_entry;
         firstConnectedClient->prev = NULL;
         firstConnectedClient->next = NULL;
@@ -89,13 +91,8 @@ int insert_new_client(int connect_fd, struct sockaddr_in clientAddress)
 
         lastConnectedClient = lastConnectedClient->next;
         lastConnectedClient->next = NULL;
-
-        printf("This was NOT the first client\n");
     }
 
-
-    printf("Active clients: %d, difference between last time checked(%d): %d\n", *(actual_clients), lastClientNumWhenChecked,
-           abs(*(actual_clients)-lastClientNumWhenChecked));
     if(abs(*(actual_clients)-lastClientNumWhenChecked) >= CHECK_PERC_EACH)
         checkClientPercentage();
 
@@ -107,6 +104,8 @@ int insert_new_client(int connect_fd, struct sockaddr_in clientAddress)
 //function that close (and remove) a client connection
 int remove_client(struct client_info client)
 {
+    printf("\tServer branch with pid %d into remove_client\n", getpid());
+
     for(struct client_list *current = firstConnectedClient; current != NULL; current = current->next){
 
         //removing client from connectedClient list
@@ -127,25 +126,20 @@ int remove_client(struct client_info client)
             //if the element is the head of the list then
             //make the next element the new head list
             if((current->prev) == NULL){
-                printf("FD was the FIRST element of the list\n");
                 firstConnectedClient = current->next;
 
                 if(firstConnectedClient != NULL)
                     firstConnectedClient->prev = NULL;
 
             }else if((current->next) == NULL){
-
-                printf("FD was the LAST element of the list\n");
                 lastConnectedClient = (current->prev);
                 (lastConnectedClient->next) = NULL;
             }else{
-                printf("FD was in the MIDDLE of the list\n");
                 ((current->prev)->next) = (current->next);
                 (current->next)->prev = current->prev;
             }
 
             //free current
-            printf("Freeing FD\n");
             free(current);
 
             if(sem_wait(sem_cli) == -1){
@@ -172,9 +166,13 @@ int remove_client(struct client_info client)
 
             //TODO qui aggiornamento file log
 
+            printf("\tServer branch with pid %d client removed\n", getpid());
+
             return 0;
         }
     }
+
+    printf("\tServer branch with pid %d fd to remove not found\n", getpid());
 
     return -1;
 }
@@ -253,6 +251,8 @@ int handleRequest(struct client_info *client)
         }
 
         numSetsReady--;
+
+        printf("\tServer branch with pid %d has finisched to handle the request of fd = %d\n", getpid(), client->fd);
     }
 
     return 0;
@@ -297,6 +297,8 @@ int main(int argc, char **argv)
     //going to the correct position of the ''array''
     talkToHandler += position;
 
+    printf("Given position from (talkToHandler): %p to (talkToHandler+1):%p\n", talkToHandler, talkToHandler+1);
+
     //initializing data which will be used to talk with the handler
     actual_clients = &(talkToHandler->active_clients);
     *actual_clients = 0;
@@ -306,7 +308,7 @@ int main(int argc, char **argv)
 
     //attaching to handler 'global' information structure
     int id_handlerInfo;
-    if((id_handlerInfo = shmget(IPC_HNDLR_INFO_KEY, sizeof(struct handler_info), 0)) == -1){
+    if((id_handlerInfo = shmget(IPC_HNDLR_INFO_KEY, sizeof(struct handler_info), 0666)) == -1){
         perror("Error in shmget (getting handler_info structure): ");
         exit(-1);
     }
@@ -318,7 +320,7 @@ int main(int argc, char **argv)
     //attaching to cache
     void *cache;
     int id_cache;
-    if((id_cache = shmget(IPC_HNDLR_INFO_KEY, sizeof(struct handler_info), 0)) == -1){
+    if((id_cache = shmget(IPC_HNDLR_INFO_KEY, sizeof(struct handler_info), 0666)) == -1){
         perror("Error in shmget (getting handler_info structure): ");
         exit(-1);
     }
@@ -380,6 +382,7 @@ int main(int argc, char **argv)
         readSet = allSet;
 
         //clientStatus(position);
+        printf("\tServer branch with pid %d waiting on the select\n", getpid());
         if((numSetsReady = (select(max_fd +1, &readSet, NULL, NULL, NULL))) == -1){
 
             //may be interrubted by a signal
@@ -432,14 +435,19 @@ int main(int argc, char **argv)
 
             numSetsReady--;
 
+            printf("\tServer branch with pid %d has inserted clients\n", getpid());
+
         }
 
         //look for other descriptors
         if (numSetsReady <= 0)
             continue;
 
+        printf("\tServer branch with pid %d has numSetsReady = %d, starting handling clients\n", getpid(), numSetsReady);
+
         for(struct client_list *current = firstConnectedClient; current != NULL && numSetsReady > 0; current = current->next){
 
+            //TODO WHY THIS PREVENTS TO STCK SMASCHING
             printf("fd: %d, address: %p\n", (current->client).fd, &(current->client));
 
             if(handleRequest(&(current->client)) == -1){
@@ -449,12 +457,17 @@ int main(int argc, char **argv)
             }
 
         }
+
+        printf("\tServer branch with pid %d has finisched to handle the clients (numSetsReady = %d)\n", getpid(), numSetsReady);
+
+        //TODO WHY THIS PREVENT TO LOOP THE CLIENTS REQUEST
         clientStatus(position);
     }
 }
 
 /*
  * Server branch a volte no risponde più ai client                              (RISOLTO)
- * Server branch solo quando è piena a volte risponde in loop un client         (RISOLTO)
- * Segnale di ricezione dei client non arriva a destinazione
+ * Server branch solo quando è piena a volte risponde in loop un client         (RISOLTO, messo in todo)
+ * Segnale di ricezione dei client non arriva a destinazione                    (RISOLVERE prima quelli sopra)
+ * Stack smasching                                                              (se non ci sta la printf nel for)
  */
