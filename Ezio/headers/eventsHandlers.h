@@ -5,8 +5,10 @@
 #include <sys/un.h>
 
 //function that recive the client connection from a server branch
-void recive_clients()
+void recive_clients(int signum)
 {
+    printf("Server branch %d reciving clients (pre wait)\n", getpid());
+
     //waiting for se sender to create and listen on the unix socket
     if(sem_wait(&(handler_info->sem_sendRecive)) == -1){
         perror("Error in sem_post (recive_clients)");
@@ -17,9 +19,7 @@ void recive_clients()
     struct sockaddr_un addr;
     int unixSock_fd;
 
-    int NUM_RETRIES = 3;
-
-    printf("Server branch %d reciving clients\n", getpid());
+    printf("Server branch %d reciving clients (post wait)\n", getpid());
 
     if((unixSock_fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1){
         perror("Unable to create unix socket: ");
@@ -33,7 +33,7 @@ void recive_clients()
         strncpy(addr.sun_path+1, socket_path+1, sizeof(addr.sun_path)-2);
     }else{
         strncpy(addr.sun_path, socket_path, sizeof(addr.sun_path)-1);
-        unlink(socket_path);
+        //unlink(socket_path);
     }
 
     if (connect(unixSock_fd, (struct sockaddr *) &addr, sizeof(addr)) == -1) {
@@ -86,13 +86,20 @@ void recive_clients()
     }
 
     printf("Recived all clients\n");
+
+    //TODO try to insert signal SIGUSR1 again
+
+    if(signal(SIGUSR1, (void *)recive_clients) == SIG_ERR){
+        perror("Error in signal (recive_clients)");
+        exit(-1);
+    }
 }
 
 
 
 //function that sends client connection to an another server branch
 //and then the server branch dies
-void send_clients()
+void send_clients(int signum)
 {
     //unix addres type
     struct sockaddr_un addr;
@@ -112,7 +119,7 @@ void send_clients()
         strncpy(addr.sun_path+1, socket_path+1, sizeof(addr.sun_path)-2);
     }else{
         strncpy(addr.sun_path, socket_path, sizeof(addr.sun_path)-1);
-        unlink(socket_path);
+        //unlink(socket_path);
     }
 
     if(bind(unixSock_fd, (struct sockaddr *)&addr, sizeof(addr)) == -1){
@@ -126,7 +133,7 @@ void send_clients()
         return;
     }
 
-    //giving the OK to the handler
+    //giving the OK to the reciver
     if(sem_post(&(handler_info->sem_sendRecive)) == -1){
         perror("Error in sem_post (send_clients): ");
         return;
@@ -165,6 +172,7 @@ void send_clients()
         perror("Error in close connection unix socket (send_clients)");
         exit(-1);
     }
+    
     if(close(unixSock_fd) == -1){
         perror("Error in close listening unix socket (send_clients)");
         exit(-1);
@@ -178,7 +186,7 @@ void send_clients()
 
 
 //function that close the connection of the inactive clients
-void clean()
+void clean(int signum)
 {
     printf("Clener has just been called\n");
 

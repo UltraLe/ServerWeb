@@ -2,6 +2,7 @@
 // Created by ezio on 16/07/19.
 //
 
+#include <wait.h>
 #include "const.h"
 
 int actual_branches_num = 0;
@@ -21,6 +22,20 @@ struct branch_handler_communication *array_hb;
 
 
 
+void sig_chl_handler(int signum)
+{
+    int status;
+    pid_t pid;
+
+    while((pid = waitpid(WAIT_ANY, &status, WNOHANG)) > 0){
+        printf("Serer branch %d has terminated\n", pid);
+        return;
+    }
+}
+
+
+
+//Used for testing, remove before deploy
 void branchesStatus()
 {
     int temp;
@@ -54,6 +69,7 @@ int look_for_first_array_pos()
     }
     return -1;
 }
+
 
 
 int create_new_branch()
@@ -137,18 +153,21 @@ int merge_branches(int pid_clientReciver, struct branch_handler_communication *r
     sender_addr->send_clients = (char)1;
     sender_addr->recive_clients = (char)0;
 
-    //sender has to open the conneciton
-    if(kill(pid_clientSender, SIGUSR2) == -1){
-        perror("Error in kill (SIGUSR2) the 'sender': ");
-        exit(-1);
-    }
-    printf("Sent SIGUSR2 to %d\n", pid_clientSender);
+    //TODO invertiti segnali per sgamare bug del ricevitore
 
+    //killing reciver
     if(kill(pid_clientReciver, SIGUSR1) == -1){
         perror("Error in kill (SIGUSR1) the 'reciver': ");
         exit(-1);
     }
     printf("Sent SIGUSR1 to %d\n", pid_clientReciver);
+
+    //killing sender
+    if(kill(pid_clientSender, SIGUSR2) == -1){
+        perror("Error in kill (SIGUSR2) the 'sender': ");
+        exit(-1);
+    }
+    printf("Sent SIGUSR2 to %d\n", pid_clientSender);
 
     //waiting that both the reciver and transmitter
     //has finished to transmit connections (file descriptor)
@@ -194,6 +213,8 @@ int merge_branches(int pid_clientReciver, struct branch_handler_communication *r
 
     actual_branches_num--;
 
+    printf("Merge function ended\n");
+
     return 0;
 }
 
@@ -203,6 +224,9 @@ void clients_has_changed()
 {
     //the 2 branches with less number of connected clients will be selected
     //and eventually used in merge_branches
+
+    printf("Recived SIGUSR1 in handler, client has changed\n");
+
     int min = MAX_CLI_PER_SB+1;
     int veryMin = min;
     pid_t minPid = -1, veryMinPid = -1;
@@ -228,8 +252,6 @@ void clients_has_changed()
             exit(-1);
         }
 
-        printf("Server branch active clients: %d\n", temp);
-
         //TODO test
         connectedClients += temp;
 
@@ -249,8 +271,6 @@ void clients_has_changed()
 
     //NUM_INIT_SB should never be less than 2, or
     //this logic does not work anymore.
-
-    printf("Number of actual active connections: %d\n", connectedClients);
 
     //if connected clients are grater than the 80% of acceptable clients then
     //create a new branch,
@@ -361,7 +381,10 @@ int main(int argc, char **argv) {
         exit(-1);
     }
 
-    //TODO check if child (created with execl) becomes zombies when they dies, and handle it
+    if(signal(SIGCHLD, sig_chl_handler) == SIG_ERR){
+        perror("Error in signal (SIGCHL)");
+        exit(-1);
+    }
 
     if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &socket_opt, sizeof(socket_opt)) == -1) {
         perror("Error in setsockopt: ");

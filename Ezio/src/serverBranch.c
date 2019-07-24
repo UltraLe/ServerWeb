@@ -28,6 +28,8 @@ sem_t *sem_cli;
 int *actual_clients;
 int lastClientNumWhenChecked = 0;
 
+short serverIsFull = 0;
+
 int numSetsReady, max_fd;
 fd_set readSet, allSet;
 
@@ -154,6 +156,15 @@ int remove_client(struct client_info client)
             if(sem_post(sem_cli) == -1){
                 perror("Unable to sem_post (insert_new_client): ");
                 return -1;
+            }
+
+            //making the server branch able to accept new connection
+            //if it is no more full.
+            //if server is full and i am removing a client
+            //then it is no more full
+            if(serverIsFull) {
+                FD_SET(handler_info->listen_fd, &allSet);
+                serverIsFull = 0;
             }
 
             if(abs(*(actual_clients)-lastClientNumWhenChecked) >= CHECK_PERC_EACH)
@@ -286,8 +297,6 @@ int main(int argc, char **argv)
     //going to the correct position of the ''array''
     talkToHandler += position;
 
-    printf("Server branch with pid %d ready\n", getpid());
-
     //initializing data which will be used to talk with the handler
     actual_clients = &(talkToHandler->active_clients);
     *actual_clients = 0;
@@ -321,7 +330,7 @@ int main(int argc, char **argv)
     //the server branch will react to SIGUSR1 by
     //setting up an AF_UNIX socket through with it
     //will recive the connections of another server branch
-    if(signal(SIGUSR1, recive_clients) == SIG_ERR){
+    if(signal(SIGUSR1, (void *)recive_clients) == SIG_ERR){
         perror("Error in signal (SIGUSR1): ");
         exit(-1);
     }
@@ -330,7 +339,7 @@ int main(int argc, char **argv)
     //setting up an AF_UNIX socket through with it
     //will send the connections to another server branch
     //and return when the operation is complete
-    if(signal(SIGUSR2, send_clients) == SIG_ERR){
+    if(signal(SIGUSR2, (void *)send_clients) == SIG_ERR){
         perror("Error in signal (SIGUSR2): ");
         exit(-1);
     }
@@ -360,6 +369,7 @@ int main(int argc, char **argv)
 
     max_fd = handler_info->listen_fd;
 
+    printf("\tServer branch with pid %d ready\n", getpid());
     //ready to serve clients
     while(1){
 
@@ -382,7 +392,7 @@ int main(int argc, char **argv)
 
         //if a new client try to connect to the web server,
         //and the server branch can handle other connection
-        if(FD_ISSET(handler_info->listen_fd, &readSet) && (*actual_clients) != MAX_CLI_PER_SB) {
+        if(FD_ISSET(handler_info->listen_fd, &readSet)) {
 
             //try to accept its connection
             tryWaitRet = sem_trywait(&(handler_info->sem_toListenFd));
@@ -413,12 +423,15 @@ int main(int argc, char **argv)
                 printf("Cannot accept client, max capacity has been reached\n");
             }
 
+            //if the server branch
+            //reaches the max capacity, ignore the next connections
+            if((*actual_clients) == MAX_CLI_PER_SB){
+                FD_CLR(handler_info->listen_fd, &allSet);
+                serverIsFull = 1;
+            }
+
             numSetsReady--;
 
-        }else if(FD_ISSET(handler_info->listen_fd, &readSet) && (*actual_clients) == MAX_CLI_PER_SB){
-            //if the server branch acquired the semaphore to accept a new client,
-            //but it reaches the max capacity, ignore the connection request
-            numSetsReady--;
         }
 
         //look for other descriptors
@@ -427,18 +440,21 @@ int main(int argc, char **argv)
 
         for(struct client_list *current = firstConnectedClient; current != NULL && numSetsReady > 0; current = current->next){
 
-            //TODO this string save the server branch life, why ? solved
             printf("fd: %d, address: %p\n", (current->client).fd, &(current->client));
 
             if(handleRequest(&(current->client)) == -1){
                 printf("Error: could not handleRequest (main)\n");
-                numSetsReady--;
+                //numSetsReady--;
                 continue;
             }
 
         }
         clientStatus(position);
-        //sleep(1);
-        //request handled
     }
 }
+
+/*
+ * Server branch a volte no risponde più ai client                              (RISOLTO)
+ * Server branch solo quando è piena a volte risponde in loop un client         (RISOLTO)
+ * Segnale di ricezione dei client non arriva a destinazione
+ */
