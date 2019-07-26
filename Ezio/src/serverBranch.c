@@ -30,8 +30,8 @@ int lastClientNumWhenChecked = 0;
 
 short serverIsFull = 0;
 
-int numSetsReady, max_fd;
 fd_set readSet, allSet;
+int numSetsReady, max_fd;
 
 #include "checkClientPercentage.h"
 
@@ -186,6 +186,8 @@ int remove_client(struct client_info client)
 //function that handles a client HTTP request
 int handleRequest(struct client_info *client)
 {
+    printf("\tServer branch with pid %d before shitty variable\n", getpid());
+
     int numByteRead;
     char readBuffer[READ_BUFFER_BYTE];
     memset(readBuffer, 0, sizeof(readBuffer));
@@ -212,6 +214,8 @@ int handleRequest(struct client_info *client)
     strcat(http, http_header);
     strcat(http, http_body);
     //FINE ROBA DA TOGLIERE DOPO IL MERGE
+
+    printf("\tServer branch with pid %d after shitty variable\n", getpid());
 
     if(FD_ISSET(client->fd, &readSet)){
 
@@ -252,7 +256,7 @@ int handleRequest(struct client_info *client)
 
         numSetsReady--;
 
-        printf("\tServer branch with pid %d has finisched to handle the request of fd = %d\n", getpid(), client->fd);
+        printf("\tServer branch with pid %d has finisched to handle the request\n", getpid());
     }
 
     return 0;
@@ -367,6 +371,7 @@ int main(int argc, char **argv)
 
     //initializing the set
     FD_ZERO(&allSet);
+
     FD_SET(handler_info->listen_fd, &allSet);
 
     max_fd = handler_info->listen_fd;
@@ -399,6 +404,8 @@ int main(int argc, char **argv)
 
             //try to accept its connection
             tryWaitRet = sem_trywait(&(handler_info->sem_toListenFd));
+
+            //TODO vedere errno e multiprocessi
 
             if(errno == EAGAIN){
                 continue;
@@ -447,8 +454,10 @@ int main(int argc, char **argv)
 
         for(struct client_list *current = firstConnectedClient; current != NULL && numSetsReady > 0; current = current->next){
 
-            //TODO WHY THIS PREVENTS TO STCK SMASCHING
-            printf("fd: %d, address: %p\n", (current->client).fd, &(current->client));
+            //TODO WHY THIS PREVENTS TO STACK SMASCHING
+            //printf("fd: %d, address: %p\n", (current->client).fd, &(current->client));
+
+            printf("\tServer branch with pid %d in for\n", getpid());
 
             if(handleRequest(&(current->client)) == -1){
                 printf("Error: could not handleRequest (main)\n");
@@ -456,18 +465,41 @@ int main(int argc, char **argv)
                 continue;
             }
 
+            printf("\tServer branch with pid %d in for, after handler_request\n", getpid());
+
         }
 
         printf("\tServer branch with pid %d has finisched to handle the clients (numSetsReady = %d)\n", getpid(), numSetsReady);
 
-        //TODO WHY THIS PREVENT TO LOOP THE CLIENTS REQUEST
-        clientStatus(position);
+        //TODO WHY THIS PREVENT TO LOOP THE CLIENTS REQUEST, not true, it is ok to delete it
+        //clientStatus(position);
     }
 }
 
 /*
- * Server branch a volte no risponde più ai client                              (RISOLTO)
+ * Server branch a volte no risponde più ai client
+ *                                                                               E' bloccato da qualche parte, non nella select,
+ *                                                                               perchè quando il cleaner è chiamato
+ *                                                                               lui non ritorna nella select
+ *
+ *
  * Server branch solo quando è piena a volte risponde in loop un client         (RISOLTO, messo in todo)
+ *
  * Segnale di ricezione dei client non arriva a destinazione                    (RISOLVERE prima quelli sopra)
+ *
  * Stack smasching                                                              (se non ci sta la printf nel for)
+ *                                                                              Dallo screen si ha lo stack smasching solo quando cerco di
+ *                                                                              accedere al FD di un client dopo che è stato rimossoo, e quindi dopo
+ *                                                                              che ne è stat liberata la memoria,
+ *                                                                              quindi cerco di accedere ad un area di memoria sconosciuta.
+ *                                                                              CORRETTO eliminando l'echo dopo l'handle request
+ *
+ *
+ *
+ * MERGE OPRATION, il ricevitore ignora il segnale la seconda volta che viene chiamato il merge
+ *
+ * 26/7/2019  13:28  generater 39 clients with branches of 10 clients capacity with no bugs
+ *
+ *                   closing connection:
+ *
  */
