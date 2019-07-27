@@ -380,10 +380,19 @@ int main(int argc, char **argv)
     firstConnectedClient = NULL;
     lastConnectedClient = firstConnectedClient;
 
+    struct timeval time;
+    memset(&time, 0, sizeof(time));
+    time.tv_usec = 0;
+    time.tv_sec = 0;
+    int thereIsClient;
+    fd_set checkListenSet, listenSet;
+
     //initializing the set
     FD_ZERO(&allSet);
 
     FD_SET(handler_info->listen_fd, &allSet);
+
+    listenSet = allSet;
 
     max_fd = handler_info->listen_fd;
 
@@ -399,7 +408,7 @@ int main(int argc, char **argv)
 
         printf("\tServer branch with pid %d waiting on the select\n", getpid());
 
-        if((numSetsReady = (select(max_fd +1, &readSet, NULL, NULL, NULL))) == -1){
+        if((numSetsReady = (select(max_fd + 1, &readSet, NULL, NULL, NULL))) == -1){
 
             //may be interrubted by a signal
             if(errno == EINTR)
@@ -409,27 +418,26 @@ int main(int argc, char **argv)
             exit(-1);
         }
 
-        //if a new client try to connect to the web server,
-        //and the server branch can handle other connection
-        //used while in order to give server branches that did not acquired the semaphore
-        //to check if other clients has to be server (breaking out the 'fake' cicle)
         while(FD_ISSET(handler_info->listen_fd, &readSet)) {
 
-            //try to accept its connection
+            //try to establish a connection
 
             printf("\tServer branch wih pid: %d in trywait\n", getpid());
 
             tryWaitRet = sem_trywait(&(handler_info->sem_toListenFd));
 
             if (errno == EAGAIN) {
-                //handle client requests (if there are any) if sempahore was not acquired
                 printf("\tServer branch wih pid: %d did not acquired semaphore\n", getpid());
                 numSetsReady--;
+                //handle client requests (if there are any) if sempahore was not acquired
                 break;
+
             } else if (errno == EINTR) {
                 printf("The sem_trywait has been interrupted by a signal\n");
+                //ignore the client to be accepted, and check if other clients has to be handled
                 numSetsReady--;
                 break;
+
             } else if (tryWaitRet == -1) {
                 perror("Error in sem_trywait");
                 exit(-1);
@@ -437,16 +445,55 @@ int main(int argc, char **argv)
 
             printf("\tServer branch wih pid: %d acquired semaphore\n", getpid());
 
-            //TODO some branches get lost down here
-
             memset(&acceptedClientAddress, 0, sizeof(acceptedClientAddress));
 
-            while (1){
+            //before accepting a connection another server branch could acquire the
+            //semaphore, accept the client and post the semaphore. In this case
+            //another server branch could get stuck in accept system call because
+            //the client has been already accepted.
+            //To avoid this situation a second select (with a timer of 0 seconds) function is needed to be sure
+            //that another client is ready to be accepted
+            while(1) {
+
+                checkListenSet = listenSet;
+
+                thereIsClient = select((handler_info->listen_fd) + 1, &checkListenSet, NULL, NULL, &time);
+                printf("Polling DONE, thereIsClient: %d\n", thereIsClient);
+
+                //posting the semaphore, if there are no client to accept
+                if(thereIsClient == 0) {
+                    if (sem_post(&(handler_info->sem_toListenFd)) == -1) {
+                        perror("Error in sem_post (sem_toListenFd): ");
+                        exit(-1);
+                    }
+
+                    break;
+                }
+
+                if(thereIsClient == -1 && errno == EINTR){
+                    //if the select is interrupted by a signal, repeat it
+                    printf("Select with timer has been interrupted\n");
+                    errno = 0;
+                    continue;
+
+                }else if(thereIsClient == -1 && errno != EINTR){
+                    perror("Error in select with the timer");
+                    exit(-1);
+                }
+
+                break;
+            }
+
+            while (thereIsClient){
+
+                printf("There is a client\n");
+
                 //if the branch is here he has to take care of the connection :)
                 connect_fd = accept(handler_info->listen_fd, (struct sockaddr *) &acceptedClientAddress, &lenCliAddr);
 
                 //if the syscall has been interrupted by a signal, then restart it
                 if (connect_fd == -1 && errno == EINTR) {
+                    errno = 0;
                     continue;
                 }
 
@@ -456,35 +503,34 @@ int main(int argc, char **argv)
                     exit(-1);
                 }
 
-                //if accept did not return -1, then proceed
+                //posting the semaphore, once accepted the connection
+                if (sem_post(&(handler_info->sem_toListenFd)) == -1) {
+                    perror("Error in sem_post (sem_toListenFd): ");
+                    exit(-1);
+                }
+
+                printf("\tServer branch wih pid: %d has posted semaphore\n", getpid());
+
+                if (insert_new_client(connect_fd, acceptedClientAddress) == -1) {
+                    printf("Cannot accept client, max capacity has been reached\n");
+                }
+
+                //if the server branch
+                //reaches the max capacity, ignore the next connections
+                if ((*actual_clients) == MAX_CLI_PER_SB) {
+                    FD_CLR(handler_info->listen_fd, &allSet);
+                    serverIsFull = 1;
+                }
+
+                printf("\tServer branch with pid %d has inserted clients\n", getpid());
+
                 break;
             }
 
-            //posting the semaphore, once accepted the connection
-            if (sem_post(&(handler_info->sem_toListenFd)) == -1) {
-                perror("Error in sem_post (sem_toListenFd): ");
-                exit(-1);
-            }
-
-            //TODO some branches get lost up above
-
-            printf("\tServer branch wih pid: %d has posted semaphore\n",getpid());
-
-            if (insert_new_client(connect_fd, acceptedClientAddress) == -1) {
-                printf("Cannot accept client, max capacity has been reached\n");
-            }
-
-            //if the server branch
-            //reaches the max capacity, ignore the next connections
-            if((*actual_clients) == MAX_CLI_PER_SB){
-                FD_CLR(handler_info->listen_fd, &allSet);
-                serverIsFull = 1;
-            }
-
+            //the server branch is here if
+            //1. he has accepted the connection of a client
+            //2. he tried to accept it but another server branch accepted it
             numSetsReady--;
-
-            printf("\tServer branch with pid %d has inserted clients\n", getpid());
-
             break;
         }
 
@@ -521,11 +567,11 @@ int main(int argc, char **argv)
  *
  *                                                                               Beccare dove rimane bloccato sfruttando la chiamata al cleaner
  *                                                                               Si blocca dopo aver acquisito il semaforo per l0accettazione di un client
- *                                                                               Trovato, da risolvere
+ *                                                                               Risolto
  *
  *
  *
- * Server branch solo quando è piena a volte risponde in loop un client
+ * Server branch solo quando è piena a volte risponde in loop un client          Bug di select, come scritto dal man, risolvere con O_NONBLOCK
  *
  *
  * Stack smasching                                                              (se non ci sta la printf nel for)
