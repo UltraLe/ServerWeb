@@ -418,23 +418,25 @@ int main(int argc, char **argv)
             exit(-1);
         }
 
+        //TRYING to establish a connection with a client
         while(FD_ISSET(handler_info->listen_fd, &readSet)) {
-
-            //try to establish a connection
 
             printf("\tServer branch wih pid: %d in trywait\n", getpid());
 
+            //acquiring semaphore on the listening socket
             tryWaitRet = sem_trywait(&(handler_info->sem_toListenFd));
 
             if (errno == EAGAIN) {
+                //handle other client requests (if there are any) if sempahore was not acquired
+
                 printf("\tServer branch wih pid: %d did not acquired semaphore\n", getpid());
                 numSetsReady--;
-                //handle client requests (if there are any) if sempahore was not acquired
                 break;
 
             } else if (errno == EINTR) {
-                printf("The sem_trywait has been interrupted by a signal\n");
                 //ignore the client to be accepted, and check if other clients has to be handled
+
+                printf("The sem_trywait has been interrupted by a signal\n");
                 numSetsReady--;
                 break;
 
@@ -447,14 +449,14 @@ int main(int argc, char **argv)
 
             memset(&acceptedClientAddress, 0, sizeof(acceptedClientAddress));
 
-            //before accepting a connection another server branch could acquire the
+            //Lets suppose that a server branch (A) returns from a select
+            //because a client has to be accepted. Lets say that another server branch (B) acquires the
             //semaphore, accept the client and post the semaphore. In this case
-            //another server branch could get stuck in accept system call because
-            //the client has been already accepted.
-            //To avoid this situation a second select (with a timer of 0 seconds) function is needed to be sure
-            //that another client is ready to be accepted
+            //the server branch (A) could get stuck in accept system call because
+            //the client has been already accepted (by B).
+            //To avoid this situation a second select (with a timer of 0 seconds -> polling) function is needed to be sure
+            //that another client is ready to be accepted.
             while(1) {
-
                 checkListenSet = listenSet;
 
                 thereIsClient = select((handler_info->listen_fd) + 1, &checkListenSet, NULL, NULL, &time);
@@ -473,6 +475,7 @@ int main(int argc, char **argv)
                 if(thereIsClient == -1 && errno == EINTR){
                     //if the select is interrupted by a signal, repeat it
                     printf("Select with timer has been interrupted\n");
+                    //resetting errno before repeating the loop
                     errno = 0;
                     continue;
 
@@ -493,6 +496,7 @@ int main(int argc, char **argv)
 
                 //if the syscall has been interrupted by a signal, then restart it
                 if (connect_fd == -1 && errno == EINTR) {
+                    //resetting errno before repeating the loop
                     errno = 0;
                     continue;
                 }
@@ -529,7 +533,7 @@ int main(int argc, char **argv)
 
             //the server branch is here if
             //1. he has accepted the connection of a client
-            //2. he tried to accept it but another server branch accepted it
+            //2. he tried to accept it but another server branch has already accepted it
             numSetsReady--;
             break;
         }
@@ -559,7 +563,7 @@ int main(int argc, char **argv)
 }
 
 /*
- * Server branch a volte no risponde più ai client
+ * Server branch a volte no risponde più ai client SOLVED
  *                                                                               E' bloccato da qualche parte, non nella select,
  *                                                                               perchè quando il cleaner è chiamato
  *                                                                               lui non ritorna nella select
@@ -571,10 +575,12 @@ int main(int argc, char **argv)
  *
  *
  *
- * Server branch solo quando è piena a volte risponde in loop un client          Bug di select, come scritto dal man, risolvere con O_NONBLOCK
+ * Server branch solo quando è piena a volte risponde in loop un client          ?
  *
  *
- * Stack smasching                                                              (se non ci sta la printf nel for)
+ *
+ *
+ * Stack smasching  SOLVED                                                      (se non ci sta la printf nel for)
  *                                                                              Dallo screen si ha lo stack smasching solo quando cerco di
  *                                                                              accedere al FD di un client dopo che è stato rimossoo, e quindi dopo
  *                                                                              che ne è stat liberata la memoria,
@@ -583,16 +589,6 @@ int main(int argc, char **argv)
  *
  *
  *
- * MERGE OPRATION, il ricevitore ignora il segnale la seconda volta che viene chiamato il merge
- *
- * 26/7/2019  13:28  generated 39 clients with branches of 10 clients capacity with no bugs     (tested 2 times)
- *
- *                   closing connection: OK
- *
- *                   Merge operation: first time the first didnt work
- *                                    second time the second didt work
- *
- *
- *            15:56 testing in the same way with 100 clients the bugs up above are still present
- *
+ * MERGE OPRATION                                                               il ricevitore ignora il segnale la seconda volta che viene
+ *                                                                              chiamato il merge
  */
