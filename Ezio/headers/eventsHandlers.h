@@ -188,7 +188,7 @@ void send_clients(int signum)
 //function that close the connection of the inactive clients
 void clean(int signum)
 {
-    printf("Clener has just been called\n");
+    printf("Clener has just been called from pid %d\n", getpid());
 
     //getting current time
     time_t now = time(0);

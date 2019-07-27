@@ -31,7 +31,7 @@ int lastClientNumWhenChecked = 0;
 short serverIsFull = 0;
 
 fd_set readSet, allSet;
-int numSetsReady, max_fd;
+int numSetsReady = 0, max_fd;
 
 #include "checkClientPercentage.h"
 
@@ -73,8 +73,9 @@ int insert_new_client(int connect_fd, struct sockaddr_in clientAddress)
 
     //TODO qui aggiornamento del file log ?
 
-    if(connect_fd > max_fd)
+    if(connect_fd > max_fd) {
         max_fd = connect_fd;
+    }
 
     //linking last element with previous
 
@@ -219,6 +220,13 @@ int handleRequest(struct client_info *client)
 
     if(FD_ISSET(client->fd, &readSet)){
 
+        //removing client->fd from readSet  in order to prevent loops
+        //if loop is still present, it is a telnet problem, test with httperf
+
+        FD_CLR(client->fd, &readSet);
+
+        printf("\tServer branch wih pid: %d reading from %d\n",getpid(), client->fd);
+
         if((numByteRead = read(client->fd, readBuffer, sizeof(readBuffer))) == 0){
             //client has closed connection
             if(remove_client(*client) == -1){
@@ -237,6 +245,8 @@ int handleRequest(struct client_info *client)
 
             //Updating client's last time active
             client->last_time_active = time(0);
+
+            printf("\tServer branch wih pid: %d writing to %d\n",getpid(), client->fd);
 
             //USATA PER TEST
             if(writen(client->fd, http, strlen(http)) < 0){
@@ -257,6 +267,7 @@ int handleRequest(struct client_info *client)
         numSetsReady--;
 
         printf("\tServer branch with pid %d has finisched to handle the request\n", getpid());
+
     }
 
     return 0;
@@ -386,8 +397,8 @@ int main(int argc, char **argv)
         //resetting readSet
         readSet = allSet;
 
-        //clientStatus(position);
         printf("\tServer branch with pid %d waiting on the select\n", getpid());
+
         if((numSetsReady = (select(max_fd +1, &readSet, NULL, NULL, NULL))) == -1){
 
             //may be interrubted by a signal
@@ -400,27 +411,53 @@ int main(int argc, char **argv)
 
         //if a new client try to connect to the web server,
         //and the server branch can handle other connection
-        if(FD_ISSET(handler_info->listen_fd, &readSet)) {
+        //used while in order to give server branches that did not acquired the semaphore
+        //to check if other clients has to be server (breaking out the 'fake' cicle)
+        while(FD_ISSET(handler_info->listen_fd, &readSet)) {
 
             //try to accept its connection
+
+            printf("\tServer branch wih pid: %d in trywait\n", getpid());
+
             tryWaitRet = sem_trywait(&(handler_info->sem_toListenFd));
 
-            //TODO vedere errno e multiprocessi
-
-            if(errno == EAGAIN){
-                continue;
-            }else if(tryWaitRet == -1){
-                perror("Error in sem_trywait:");
+            if (errno == EAGAIN) {
+                //handle client requests (if there are any) if sempahore was not acquired
+                printf("\tServer branch wih pid: %d did not acquired semaphore\n", getpid());
+                numSetsReady--;
+                break;
+            } else if (errno == EINTR) {
+                printf("The sem_trywait has been interrupted by a signal\n");
+                numSetsReady--;
+                break;
+            } else if (tryWaitRet == -1) {
+                perror("Error in sem_trywait");
                 exit(-1);
             }
 
+            printf("\tServer branch wih pid: %d acquired semaphore\n", getpid());
+
+            //TODO some branches get lost down here
+
             memset(&acceptedClientAddress, 0, sizeof(acceptedClientAddress));
 
-            //if the branch is here he has to take care of the connection :)
-            if ((connect_fd = accept(handler_info->listen_fd,
-                                     (struct sockaddr *) &acceptedClientAddress, &lenCliAddr)) == -1) {
-                perror("Error in accept: ");
-                exit(-1);
+            while (1){
+                //if the branch is here he has to take care of the connection :)
+                connect_fd = accept(handler_info->listen_fd, (struct sockaddr *) &acceptedClientAddress, &lenCliAddr);
+
+                //if the syscall has been interrupted by a signal, then restart it
+                if (connect_fd == -1 && errno == EINTR) {
+                    continue;
+                }
+
+                //if the server branch is here another error occurred
+                if(connect_fd == -1 && errno != EINTR){
+                    perror("Error in accept");
+                    exit(-1);
+                }
+
+                //if accept did not return -1, then proceed
+                break;
             }
 
             //posting the semaphore, once accepted the connection
@@ -428,6 +465,10 @@ int main(int argc, char **argv)
                 perror("Error in sem_post (sem_toListenFd): ");
                 exit(-1);
             }
+
+            //TODO some branches get lost up above
+
+            printf("\tServer branch wih pid: %d has posted semaphore\n",getpid());
 
             if (insert_new_client(connect_fd, acceptedClientAddress) == -1) {
                 printf("Cannot accept client, max capacity has been reached\n");
@@ -444,6 +485,7 @@ int main(int argc, char **argv)
 
             printf("\tServer branch with pid %d has inserted clients\n", getpid());
 
+            break;
         }
 
         //look for other descriptors
@@ -453,9 +495,6 @@ int main(int argc, char **argv)
         printf("\tServer branch with pid %d has numSetsReady = %d, starting handling clients\n", getpid(), numSetsReady);
 
         for(struct client_list *current = firstConnectedClient; current != NULL && numSetsReady > 0; current = current->next){
-
-            //TODO WHY THIS PREVENTS TO STACK SMASCHING
-            //printf("fd: %d, address: %p\n", (current->client).fd, &(current->client));
 
             printf("\tServer branch with pid %d in for\n", getpid());
 
@@ -470,9 +509,6 @@ int main(int argc, char **argv)
         }
 
         printf("\tServer branch with pid %d has finisched to handle the clients (numSetsReady = %d)\n", getpid(), numSetsReady);
-
-        //TODO WHY THIS PREVENT TO LOOP THE CLIENTS REQUEST, not true, it is ok to delete it
-        //clientStatus(position);
     }
 }
 
@@ -483,9 +519,14 @@ int main(int argc, char **argv)
  *                                                                               lui non ritorna nella select
  *
  *
- * Server branch solo quando è piena a volte risponde in loop un client         (RISOLTO, messo in todo)
+ *                                                                               Beccare dove rimane bloccato sfruttando la chiamata al cleaner
+ *                                                                               Si blocca dopo aver acquisito il semaforo per l0accettazione di un client
+ *                                                                               Trovato, da risolvere
  *
- * Segnale di ricezione dei client non arriva a destinazione                    (RISOLVERE prima quelli sopra)
+ *
+ *
+ * Server branch solo quando è piena a volte risponde in loop un client
+ *
  *
  * Stack smasching                                                              (se non ci sta la printf nel for)
  *                                                                              Dallo screen si ha lo stack smasching solo quando cerco di
@@ -498,8 +539,14 @@ int main(int argc, char **argv)
  *
  * MERGE OPRATION, il ricevitore ignora il segnale la seconda volta che viene chiamato il merge
  *
- * 26/7/2019  13:28  generater 39 clients with branches of 10 clients capacity with no bugs
+ * 26/7/2019  13:28  generated 39 clients with branches of 10 clients capacity with no bugs     (tested 2 times)
  *
- *                   closing connection:
+ *                   closing connection: OK
+ *
+ *                   Merge operation: first time the first didnt work
+ *                                    second time the second didt work
+ *
+ *
+ *            15:56 testing in the same way with 100 clients the bugs up above are still present
  *
  */
