@@ -574,9 +574,18 @@ int main(int argc, char **argv)
         }
 
         printf("\tServer branch with pid %d has finisched to handle the clients (numSetsReady = %d)\n", getpid(), numSetsReady);
+
+        sleep(1);
     }
 }
 
 /*
- * Server branch solo quando è piena a volte risponde in loop un client          ? (Da trovare)
+ * Server branch solo quando è piena a volte risponde in loop un client          ?  (Da trovare)
+ *
+ *                                                                                  Fare un loop detector contando il numero di
+ *                                                                                  richieste consecutive di client (file descriptor)
+ *                                                                                  uguali, se le richieste consegutive sono > 5, loop beccato.
+ *                                                                                  se il loop è beccato allora mettere uno sleep(1).
+ *
+ *
  */
