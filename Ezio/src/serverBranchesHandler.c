@@ -2,7 +2,6 @@
 // Created by ezio on 16/07/19.
 //
 
-#include <wait.h>
 #include "const.h"
 
 int actual_branches_num = 0;
@@ -22,14 +21,43 @@ struct branch_handler_communication *array_hb;
 
 
 
-void sig_chl_handler(int signum)
-{
-    int status;
-    pid_t pid;
 
-    while((pid = waitpid(WAIT_ANY, &status, WNOHANG)) > 0){
-        printf("Serer branch %d has terminated\n", pid);
-        return;
+//The server branches handler will send a signal to a desired branch
+//until the handler is sure that the signal has been recived from the branch.
+//This solution is needed because sometimes signals can get lost because of
+//the select function (pselect too).
+void signal_machine_gun(sem_t *sem, int signum, pid_t process)
+{
+    int tryWaitRet;
+    int timeSent = 0;
+
+    while(1){
+
+        //the signal is sent
+        timeSent++;
+        if(kill(process, signum) == -1){
+            perror("Error in killing the process\n");
+            return;
+        }
+        printf("HANDLER: signal %d sent %d times\n", signum, timeSent);
+
+        //if the semaphore is obtained, the signal has arrived
+        tryWaitRet = sem_trywait(sem);
+
+        if(tryWaitRet == -1){
+            //If the signal has not been acquired yet,
+            //or the syscall has been interrupted, repeat.
+            if(errno == EINTR || errno == EAGAIN){
+                sleep(1);
+                continue;
+            }else{
+                perror("Error in sem_trywait (signal_machine_gun)");
+                return;
+            }
+        }else{
+            //the semaphore has been acquired -> the signal has arrived
+            break;
+        }
     }
 }
 
@@ -122,6 +150,14 @@ int create_new_branch()
         exit(-1);
     }
 
+    //the server branches handler has to send signals to the branches and
+    //this semaphore is used by the server branch to tell the handler that
+    //the desired signal arrived
+    if(sem_init(&((last_branch_info->info)->signalRecived), 1, 0) == -1){
+        perror("Error in sem_init (sem_tolistenfd): ");
+        exit(-1);
+    }
+
     //giving the position of the array_hb that the branch will own
     char memAddr[5];
     memset(memAddr, 0, sizeof(memAddr));
@@ -148,28 +184,14 @@ int merge_branches(int pid_clientReciver, struct branch_handler_communication *r
     //the process relative to the 2 branches with less number of clients
     //have to know which one is going to be the reciver and which one
     //is going to be the sender
-    //TODO remove send_clients and revice_clients if not needed
-    reciver_addr->send_clients = (char)0;
-    reciver_addr->recive_clients = (char)1;
-
-    sender_addr->send_clients = (char)1;
-    sender_addr->recive_clients = (char)0;
-
-    //TODO invertiti segnali per sgamare bug del ricevitore
-
-    //killing reciver
-    if(kill(pid_clientReciver, SIGUSR1) == -1){
-        perror("Error in kill (SIGUSR1) the 'reciver': ");
-        exit(-1);
-    }
-    printf("Sent SIGUSR1 to %d\n", pid_clientReciver);
 
     //killing sender
-    if(kill(pid_clientSender, SIGUSR2) == -1){
-        perror("Error in kill (SIGUSR2) the 'sender': ");
-        exit(-1);
-    }
+    signal_machine_gun(&(sender_addr->signalRecived) ,SIGUSR2, pid_clientSender);
     printf("Sent SIGUSR2 to %d\n", pid_clientSender);
+
+    //killing reciver until he recives the signal
+    signal_machine_gun(&(reciver_addr->signalRecived) ,SIGUSR1, pid_clientReciver);
+    printf("Sent SIGUSR1 to %d\n", pid_clientReciver);
 
     //waiting that both the reciver and transmitter
     //has finished to transmit connections (file descriptor)
@@ -222,85 +244,7 @@ int merge_branches(int pid_clientReciver, struct branch_handler_communication *r
 
 
 
-void clients_has_changed()
-{
-    //the 2 branches with less number of connected clients will be selected
-    //and eventually used in merge_branches
-
-    printf("Recived SIGUSR1 in handler, client has changed\n");
-
-    int min = MAX_CLI_PER_SB+1;
-    int veryMin = min;
-    pid_t minPid = -1, veryMinPid = -1;
-
-    struct branch_handler_communication *minAddr = NULL, *veryMinAddr = NULL;
-
-    int connectedClients = 0;
-
-    int temp;
-
-    //looking for the number of ALL the connected clients
-    for(struct branches_info_list *current = first_branch_info; current != NULL; current = current->next){
-
-        if(sem_wait(&((current->info)->sem_toNumClients)) == -1){
-            perror("Error in sem_wait (on counting connected clients): ");
-            exit(-1);
-        }
-
-        temp = (current->info)->active_clients;
-
-        if(sem_post(&((current->info)->sem_toNumClients)) == -1){
-            perror("Error in sem_post (on counting connected clients): ");
-            exit(-1);
-        }
-
-        connectedClients += temp;
-
-        if(temp < veryMin ) {
-            min = veryMin;
-            minPid = veryMinPid;
-            minAddr = veryMinAddr;
-            veryMin = temp;
-            veryMinPid = (current->info)->branch_pid;
-            veryMinAddr = current->info;
-        }else if(temp < min){
-            min = temp;
-            minPid = (current->info)->branch_pid;
-            minAddr = current->info;
-        }
-    }
-
-    //NUM_INIT_SB should never be less than 2, or
-    //this logic does not work anymore.
-
-    //if connected clients are grater than the 80% of acceptable clients then
-    //create a new branch,
-    //if connected clients are less than the 10% of acceptable clients and
-    //there are more server branches than NUM_INIT_SB then
-    //merge the 2 branches which have the less number of connected clients
-    if(connectedClients > NEW_SB_PERC*MAX_CLI_PER_SB*actual_branches_num){
-
-        if(create_new_branch()){
-            printf("Error in merge_branches\n");
-            exit(-1);
-        }
-
-    }else if(connectedClients < MERGE_SB_PERC*MAX_CLI_PER_SB*actual_branches_num
-                    && actual_branches_num > NUM_INIT_SB){
-
-        //reciver is the minPidClient
-        //sender is the veryMinClient
-        printf("Merging between sender %d, and reciver %d\n", veryMinPid, minPid);
-        if(merge_branches(minPid, minAddr, veryMinPid, veryMinAddr)){
-            printf("Error in merge_branches\n");
-            exit(-1);
-        }
-        printf("Merge ended, actual_branches_num: %d\n", actual_branches_num);
-
-    }
-
-    branchesStatus();
-}
+#include "handlerEventHandlers.h"
 
 
 
@@ -330,19 +274,19 @@ int main(int argc, char **argv) {
     //between handler and branch
     if ((id_hb = shmget(IPC_BH_COMM_KEY, sizeof(struct branch_handler_communication) * MAX_BRANCHES,
                         IPC_CREAT | 0666)) == -1) {
-        perror("Error in shmget (handler-branch): ");
+        perror("Error in shmget (handler-branch)");
         exit(-1);
     }
 
     //attaching the memory starting from array_hb. This way we can see this memory
     //as it was an array_hb[MAX_BRANCHES].
     if ((array_hb = shmat(id_hb, NULL, SHM_R | SHM_W)) == (void *) -1) {
-        perror("Error in shmat (array_hb): ");
+        perror("Error in shmat (array_hb)");
         exit(-1);
     }
 
     if ((info = shmat(id_info, NULL, SHM_R | SHM_W)) == (void *) -1) {
-        perror("Error in shmat: ");
+        perror("Error in shmat");
         exit(-1);
     }
 
@@ -363,7 +307,7 @@ int main(int argc, char **argv) {
     }
 
     //initislizing semaphore used to syncronize sender and reciver during
-    //the transmission of the clients from a brench server to the other.
+    //the transmission of the clients from a branch server to the other.
     //the reciver will wait this semaphore until the sender has created
     //the unix socket used to transfer clients
     if (sem_init(&sem_sendrecive, 1, 0) == -1) {

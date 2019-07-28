@@ -3,11 +3,18 @@
 //
 
 #include <sys/un.h>
+#include <wait.h>
 
 //function that recive the client connection from a server branch
 void recive_clients(int signum)
 {
     printf("Server branch %d reciving clients (pre wait)\n", getpid());
+
+    //if the signal has arrived, let the handler know about it
+    if(sem_post(sem_signalRecived) == -1){
+        perror("Error in sem_post (recive_clients, sem_signalRecived)");
+        exit(-1);
+    }
 
     //waiting for se sender to create and listen on the unix socket
     if(sem_wait(&(handler_info->sem_sendRecive)) == -1){
@@ -101,6 +108,12 @@ void recive_clients(int signum)
 //and then the server branch dies
 void send_clients(int signum)
 {
+    //if the signal has arrived, let the handler know about it
+    if(sem_post(sem_signalRecived) == -1){
+        perror("Error in sem_post (send_clients, sem_signalRecived)");
+        exit(-1);
+    }
+
     //unix addres type
     struct sockaddr_un addr;
     int unixSock_fd, unixConnSock;

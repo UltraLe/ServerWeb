@@ -8,6 +8,8 @@
 
 #include <sys/mman.h>
 
+#include <errno.h>
+
 #include <sys/types.h>
 
 #include <sys/socket.h>
@@ -23,7 +25,7 @@
 
 #include <semaphore.h>
 
-#define NUM_INIT_SB 3           //number of the server branches that will be always
+#define NUM_INIT_SB 2           //number of the server branches that will be always
                                 //ready to serve clients
 
 #define MAX_CLI_PER_SB 10       //number of clients that each server branch will handle (512)
@@ -58,9 +60,9 @@
 #define IPC_BH_COMM_KEY 34      //key to attach to the memory used to transfer information
                                 //between handler and branch
 
-#define MAX_BRANCHES 10000      //used to initialize the memory described up above
+#define MAX_BRANCHES 1000       //used to initialize the memory described up above -> (65536-1026)/MAX_CLI_PER_SB
 
-#define CHECK_PERC_EACH 1      //check the increasing/decreasing client number (of a server breanch)
+#define CHECK_PERC_EACH 1       //check the increasing/decreasing client number (of a server breanch)
                                 //every abs(CHECK_PER_EACH) connection recived/closed
 
 #define SERVER_PORT 1033
@@ -75,17 +77,16 @@ char *socket_path = "\0hidden"; //strings that identifies the AF_UNIX socket
 struct handler_info{
     pid_t pid;
     int listen_fd;
-    sem_t sem_sendRecive;
-    sem_t sem_toListenFd;
-    sem_t sem_transfClients;
+    sem_t sem_sendRecive;                   //semaphore used to synchronize reciver and sender
+    sem_t sem_toListenFd;                   //semaphore used to synchronize server branches to accept clients connection
+    sem_t sem_transfClients;                //semaphore used to synchronize handler and reciver and sender
 };
 
 struct branch_handler_communication{
     int branch_pid;
     int active_clients;
-    sem_t sem_toNumClients;
-    char recive_clients;
-    char send_clients;
+    sem_t sem_toNumClients;                 //semaphore to atomically access to the client's number of a server branch
+    sem_t signalRecived;                    //semaphore used by the handler to be sure that a signal has arrived to a server branch
 };
 
 struct client_info{

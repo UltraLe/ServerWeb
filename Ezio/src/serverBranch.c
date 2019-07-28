@@ -9,7 +9,6 @@
 #include <sys/time.h>
 #include <time.h>
 #include <asm/errno.h>
-#include <errno.h>
 #include "writen.h"
 
 #define READ_BUFFER_BYTE 4096
@@ -25,6 +24,7 @@ struct client_list *firstConnectedClient;
 struct client_list *lastConnectedClient;
 
 sem_t *sem_cli;
+sem_t *sem_signalRecived;
 int *actual_clients;
 int lastClientNumWhenChecked = 0;
 
@@ -180,7 +180,7 @@ int remove_client(struct client_info client)
 
 
 
-#include "eventsHandlers.h"
+#include "branchEventsHandlers.h"
 
 
 
@@ -294,10 +294,10 @@ int main(int argc, char **argv)
 
     int position = atoi(argv[1]);
     pid_t pid = getpid();
+    struct branch_handler_communication *talkToHandler;
 
     //attaching to the branch_handler_communication struct, in order to communicate
     //to the server branch handler
-    struct branch_handler_communication *talkToHandler;
     int id_hb;
 
     if((id_hb = shmget(IPC_BH_COMM_KEY, sizeof(struct branch_handler_communication), 0)) == -1){
@@ -319,6 +319,7 @@ int main(int argc, char **argv)
     *actual_clients = 0;
     talkToHandler->branch_pid = pid;
     sem_cli = &(talkToHandler->sem_toNumClients);
+    sem_signalRecived = &(talkToHandler->signalRecived);
 
 
     //attaching to handler 'global' information structure
@@ -590,5 +591,11 @@ int main(int argc, char **argv)
  *
  *
  * MERGE OPRATION                                                               il ricevitore ignora il segnale la seconda volta che viene
- *                                                                              chiamato il merge
+ *                                                                              chiamato il merge.
+ *                                                                              Inviato segnale ad una branch con 0 client, rimane sulla
+ *                                                                              select, ignora totalmente il segnale (ma dopo l'arrivo del segnale
+ *                                                                              funziona correttamente, risponde ai client, li accetta..)
+ *
+ *                                                                              se ha 0 client non sente gli eventi, check
+ *
  */
