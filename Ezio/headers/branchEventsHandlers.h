@@ -5,18 +5,14 @@
 #include <sys/un.h>
 #include <wait.h>
 
+
+
 //function that recive the client connection from a server branch
-void recive_clients(int signum)
+void recive_clients()
 {
     printf("Server branch %d reciving clients (pre wait)\n", getpid());
 
-    //if the signal has arrived, let the handler know about it
-    if(sem_post(sem_signalRecived) == -1){
-        perror("Error in sem_post (recive_clients, sem_signalRecived)");
-        exit(-1);
-    }
-
-    //waiting for se sender to create and listen on the unix socket
+    //waiting for the sender to create and listen on the unix socket
     if(sem_wait(&(handler_info->sem_sendRecive)) == -1){
         perror("Error in sem_post (recive_clients)");
         exit(-1);
@@ -93,26 +89,14 @@ void recive_clients(int signum)
     }
 
     printf("Recived all clients\n");
-
-    //TODO try to insert signal SIGUSR1 again
-
-    if(signal(SIGUSR1, (void *)recive_clients) == SIG_ERR){
-        perror("Error in signal (recive_clients)");
-        exit(-1);
-    }
 }
 
 
 
 //function that sends client connection to an another server branch
 //and then the server branch dies
-void send_clients(int signum)
+void send_clients()
 {
-    //if the signal has arrived, let the handler know about it
-    if(sem_post(sem_signalRecived) == -1){
-        perror("Error in sem_post (send_clients, sem_signalRecived)");
-        exit(-1);
-    }
 
     //unix addres type
     struct sockaddr_un addr;
@@ -194,6 +178,20 @@ void send_clients(int signum)
     //branches dies
     exit(0);
 
+}
+
+
+
+//the handler decided if the server branch should send or revice clients:
+void send_or_recive()
+{
+    printf("shouldRecive: %d of pid :%d\n", *shouldRecive, getpid());
+
+    if(*shouldRecive){
+        recive_clients();
+    }else{
+        send_clients();
+    }
 }
 
 

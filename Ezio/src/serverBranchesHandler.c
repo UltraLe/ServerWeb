@@ -21,48 +21,6 @@ struct branch_handler_communication *array_hb;
 
 
 
-
-//The server branches handler will send a signal to a desired branch
-//until the handler is sure that the signal has been recived from the branch.
-//This solution is needed because sometimes signals can get lost because of
-//the select function (pselect too).
-void signal_machine_gun(sem_t *sem, int signum, pid_t process)
-{
-    int tryWaitRet;
-    int timeSent = 0;
-
-    while(1){
-
-        //the signal is sent
-        timeSent++;
-        if(kill(process, signum) == -1){
-            perror("Error in killing the process\n");
-            return;
-        }
-        printf("HANDLER: signal %d sent %d times\n", signum, timeSent);
-
-        //if the semaphore is obtained, the signal has arrived
-        tryWaitRet = sem_trywait(sem);
-
-        if(tryWaitRet == -1){
-            //If the signal has not been acquired yet,
-            //or the syscall has been interrupted, repeat.
-            if(errno == EINTR || errno == EAGAIN){
-                sleep(1);
-                continue;
-            }else{
-                perror("Error in sem_trywait (signal_machine_gun)");
-                return;
-            }
-        }else{
-            //the semaphore has been acquired -> the signal has arrived
-            break;
-        }
-    }
-}
-
-
-
 //Used for testing, remove before deploy
 void branchesStatus()
 {
@@ -150,14 +108,6 @@ int create_new_branch()
         exit(-1);
     }
 
-    //the server branches handler has to send signals to the branches and
-    //this semaphore is used by the server branch to tell the handler that
-    //the desired signal arrived
-    if(sem_init(&((last_branch_info->info)->signalRecived), 1, 0) == -1){
-        perror("Error in sem_init (sem_tolistenfd): ");
-        exit(-1);
-    }
-
     //giving the position of the array_hb that the branch will own
     char memAddr[5];
     memset(memAddr, 0, sizeof(memAddr));
@@ -185,13 +135,19 @@ int merge_branches(int pid_clientReciver, struct branch_handler_communication *r
     //have to know which one is going to be the reciver and which one
     //is going to be the sender
 
-    //killing sender
-    signal_machine_gun(&(sender_addr->signalRecived) ,SIGUSR2, pid_clientSender);
-    printf("Sent SIGUSR2 to %d\n", pid_clientSender);
+    reciver_addr->recive_clients = 1;
 
-    //killing reciver until he recives the signal
-    signal_machine_gun(&(reciver_addr->signalRecived) ,SIGUSR1, pid_clientReciver);
-    printf("Sent SIGUSR1 to %d\n", pid_clientReciver);
+    sender_addr->recive_clients = 0;
+
+    if(kill(pid_clientSender, SIGUSR2) == -1){
+        perror("Error in killing sender (SIGUSR2)");
+        return -1;
+    }
+
+    if(kill(pid_clientReciver, SIGUSR2) == -1){
+        perror("Error in killing reciver (SIGUSR2)");
+        return -1;
+    }
 
     //waiting that both the reciver and transmitter
     //has finished to transmit connections (file descriptor)
@@ -359,8 +315,13 @@ int main(int argc, char **argv) {
     //when the number of the active clients of a branch get to the 10%, 50% and 80%
     //of MAX_CLI_PER_SB, it signals the creator with SIGUSR1.
     //The branches handler will decide whether merge or create branches.
-    if (signal(SIGUSR1, clients_has_changed) == SIG_ERR) {
-        perror("Error in signal: ");
+    struct sigaction act;
+    memset(&act, 0, sizeof(act));
+    act.sa_handler = clients_has_changed;
+    act.sa_flags = 0;
+
+    if(sigaction(SIGUSR1, &act, NULL) == -1){
+        perror("Error in sigaction (SIGUSR1): ");
         exit(-1);
     }
 

@@ -86,7 +86,7 @@ struct branch_handler_communication{
     int branch_pid;
     int active_clients;
     sem_t sem_toNumClients;                 //semaphore to atomically access to the client's number of a server branch
-    sem_t signalRecived;                    //semaphore used by the handler to be sure that a signal has arrived to a server branch
+    int recive_clients;
 };
 
 struct client_info{

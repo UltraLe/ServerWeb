@@ -24,7 +24,7 @@ struct client_list *firstConnectedClient;
 struct client_list *lastConnectedClient;
 
 sem_t *sem_cli;
-sem_t *sem_signalRecived;
+int *shouldRecive;
 int *actual_clients;
 int lastClientNumWhenChecked = 0;
 
@@ -319,7 +319,7 @@ int main(int argc, char **argv)
     *actual_clients = 0;
     talkToHandler->branch_pid = pid;
     sem_cli = &(talkToHandler->sem_toNumClients);
-    sem_signalRecived = &(talkToHandler->signalRecived);
+    shouldRecive = &(talkToHandler->recive_clients);
 
 
     //attaching to handler 'global' information structure
@@ -345,20 +345,34 @@ int main(int argc, char **argv)
         exit(-1);
     }
 
+    /*
     //the server branch will react to SIGUSR1 by
     //setting up an AF_UNIX socket through with it
     //will recive the connections of another server branch
-    if(signal(SIGUSR1, (void *)recive_clients) == SIG_ERR){
-        perror("Error in signal (SIGUSR1): ");
+    //TODO is the SIGUSR1 to be ignored, solve this
+    struct sigaction act1;
+    memset(&act1, 0, sizeof(act1));
+    act1.sa_handler = recive_clients;
+    act1.sa_flags = 0;
+
+    if(sigaction(SIGUSR1, &act1, NULL) == -1){
+        perror("Error in sigaction (SIGUSR1): ");
         exit(-1);
     }
+     */
 
     //the server branch will react to SIGUSR2 by
     //setting up an AF_UNIX socket through with it
     //will send the connections to another server branch
     //and return when the operation is complete
-    if(signal(SIGUSR2, (void *)send_clients) == SIG_ERR){
-        perror("Error in signal (SIGUSR2): ");
+
+    struct sigaction act2;
+    memset(&act2, 0, sizeof(act2));
+    act2.sa_handler = send_or_recive;
+    act2.sa_flags = 0;
+
+    if(sigaction(SIGUSR2, &act2, NULL) == -1){
+        perror("Error in sigaction (SIGUSR2): ");
         exit(-1);
     }
 
@@ -564,38 +578,5 @@ int main(int argc, char **argv)
 }
 
 /*
- * Server branch a volte no risponde più ai client SOLVED
- *                                                                               E' bloccato da qualche parte, non nella select,
- *                                                                               perchè quando il cleaner è chiamato
- *                                                                               lui non ritorna nella select
- *
- *
- *                                                                               Beccare dove rimane bloccato sfruttando la chiamata al cleaner
- *                                                                               Si blocca dopo aver acquisito il semaforo per l0accettazione di un client
- *                                                                               Risolto
- *
- *
- *
- * Server branch solo quando è piena a volte risponde in loop un client          ?
- *
- *
- *
- *
- * Stack smasching  SOLVED                                                      (se non ci sta la printf nel for)
- *                                                                              Dallo screen si ha lo stack smasching solo quando cerco di
- *                                                                              accedere al FD di un client dopo che è stato rimossoo, e quindi dopo
- *                                                                              che ne è stat liberata la memoria,
- *                                                                              quindi cerco di accedere ad un area di memoria sconosciuta.
- *                                                                              CORRETTO eliminando l'echo dopo l'handle request
- *
- *
- *
- * MERGE OPRATION                                                               il ricevitore ignora il segnale la seconda volta che viene
- *                                                                              chiamato il merge.
- *                                                                              Inviato segnale ad una branch con 0 client, rimane sulla
- *                                                                              select, ignora totalmente il segnale (ma dopo l'arrivo del segnale
- *                                                                              funziona correttamente, risponde ai client, li accetta..)
- *
- *                                                                              se ha 0 client non sente gli eventi, check
- *
+ * Server branch solo quando è piena a volte risponde in loop un client          ? (Da trovare)
  */
