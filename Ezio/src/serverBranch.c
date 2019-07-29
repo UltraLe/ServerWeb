@@ -30,6 +30,9 @@ int lastClientNumWhenChecked = 0;
 
 short serverIsFull = 0;
 
+//TODO variable used for detect loop bug, remove when is solved
+int lastFdServed = 0, strike;
+
 fd_set readSet, allSet;
 int numSetsReady = 0, max_fd;
 
@@ -195,30 +198,39 @@ int handleRequest(struct client_info *client)
 
     char *writeBuffer;
 
-    //USATO PER TEST RIMUOVERE
-    char *http_header = "HTTP/1.1 200 OK\nVary: Accept-Encoding\nContent-Type: text/html\nAccept-Ranges: bytes\nLast-Modified: Mon, 17 Jul 2017 19:28:15 GMT\nContent-Length: 180\nDate: Sun, 14 Jul 2019 10:44:37 GMT\nServer: lighttpd/1.4.35";
-    char *http_body = "\n\n<!DOCTYPE html>\n"
-                      "<html>\n"
-                      "<body>\n"
-                      "<h1>Hello World !</h1>\n"
-                      "<p></p>\n"
-                      "<h1>Ciao Mondo !</h1>\n"
-                      "<p>(per Giovanni)</p>\n"
-                      "<h1>Bella Fra !</h1>\n"
-                      "<p>(per Riccardo)</p>\n"
-                      "<h1>UuuuoooOOoooo !</h1>\n"
-                      "<p>(per Ezio)</p>\n"
-                      "</body>\n"
-                      "</html>";
-
-    char http[4096];
-    strcat(http, http_header);
-    strcat(http, http_body);
-    //FINE ROBA DA TOGLIERE DOPO IL MERGE
-
     printf("\tServer branch with pid %d after shitty variable\n", getpid());
 
     if(FD_ISSET(client->fd, &readSet)){
+
+        //TODO used for loop detection, remove
+        if(lastFdServed == client->fd) {
+            strike++;
+        }else{
+            lastFdServed = client->fd;
+            strike = 0;
+        }
+
+        //USATO PER TEST RIMUOVERE
+        char *http_header = "HTTP/1.1 200 OK\nVary: Accept-Encoding\nContent-Type: text/html\nAccept-Ranges: bytes\nLast-Modified: Mon, 17 Jul 2017 19:28:15 GMT\nContent-Length: 180\nDate: Sun, 14 Jul 2019 10:44:37 GMT\nServer: lighttpd/1.4.35";
+        char *http_body = "\n\n<!DOCTYPE html>\n"
+                          "<html>\n"
+                          "<body>\n"
+                          "<h1>Hello World !</h1>\n"
+                          "<p></p>\n"
+                          "<h1>Ciao Mondo !</h1>\n"
+                          "<p>(per Giovanni)</p>\n"
+                          "<h1>Bella Fra !</h1>\n"
+                          "<p>(per Riccardo)</p>\n"
+                          "<h1>UuuuoooOOoooo !</h1>\n"
+                          "<p>(per Ezio)</p>\n"
+                          "</body>\n"
+                          "</html>";
+
+        char http[4096];
+        memset(http, 0, 4096);
+        strcat(http, http_header);
+        strcat(http, http_body);
+        //FINE ROBA DA TOGLIERE DOPO IL MERGE
 
         //removing client->fd from readSet  in order to prevent loops
         //if loop is still present, it is a telnet problem, test with httperf
@@ -253,7 +265,6 @@ int handleRequest(struct client_info *client)
                 perror("Error in writen (unable to reply): ");
                 return -1;
             }
-
             //FINE ROBA DA TOGLIERE DOPO IL MERGE
 
             //TODO qui funzioni che gestiscono
@@ -344,22 +355,6 @@ int main(int argc, char **argv)
         perror("Error in shmat (attaching to handler_info struct): ");
         exit(-1);
     }
-
-    /*
-    //the server branch will react to SIGUSR1 by
-    //setting up an AF_UNIX socket through with it
-    //will recive the connections of another server branch
-    //TODO is the SIGUSR1 to be ignored, solve this
-    struct sigaction act1;
-    memset(&act1, 0, sizeof(act1));
-    act1.sa_handler = recive_clients;
-    act1.sa_flags = 0;
-
-    if(sigaction(SIGUSR1, &act1, NULL) == -1){
-        perror("Error in sigaction (SIGUSR1): ");
-        exit(-1);
-    }
-     */
 
     //the server branch will react to SIGUSR2 by
     //setting up an AF_UNIX socket through with it
@@ -575,7 +570,11 @@ int main(int argc, char **argv)
 
         printf("\tServer branch with pid %d has finisched to handle the clients (numSetsReady = %d)\n", getpid(), numSetsReady);
 
-        sleep(1);
+        //loop is detected
+        if(strike > 10) {
+            printf("\n\nLOOP DETECTED !!!!!!!!!\n\n");
+            sleep(1);
+        }
     }
 }
 
