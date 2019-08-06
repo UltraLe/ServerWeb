@@ -69,7 +69,7 @@ int create_new_branch()
     //finding a position of the array_hb...
     int pos = look_for_first_array_pos();
     
-    printf("\n\nFound %d POSITION, giving from (array+pos): %p to (attay+pos+1): %p\n\n", pos, array_hb+pos, array_hb+pos+1);
+    //printf("\n\nFound %d POSITION, giving from (array+pos): %p to (attay+pos+1): %p\n\n", pos, array_hb+pos, array_hb+pos+1);
 
     //preparing data for the new entry
     if((new_entry = (struct branches_info_list *)malloc(sizeof(struct branches_info_list))) == NULL){
@@ -337,7 +337,7 @@ int main(int argc, char **argv) {
     }
     printf("Shared memory initialized\n");
 
-    printf("CHK_PERC_EACH: %d\n", CHECK_PERC_EACH);
+    printf("CHK_PERC_EACH: %f\n", CHECK_PERC_EACH);
 
     //generating the initial server branches
     for(int i = 0; i < NUM_INIT_SB; ++i) {

@@ -10,7 +10,7 @@
 //function that recive the client connection from a server branch
 void recive_clients()
 {
-    printf("Server branch %d reciving clients (pre wait)\n", getpid());
+    //printf("Server branch %d reciving clients (pre wait)\n", getpid());
 
     //waiting for the sender to create and listen on the unix socket
     if(sem_wait(&(handler_info->sem_sendRecive)) == -1){
@@ -22,7 +22,7 @@ void recive_clients()
     struct sockaddr_un addr;
     int unixSock_fd;
 
-    printf("Server branch %d reciving clients (post wait)\n", getpid());
+    //printf("Server branch %d reciving clients (post wait)\n", getpid());
 
     if((unixSock_fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1){
         perror("Unable to create unix socket: ");
@@ -88,7 +88,7 @@ void recive_clients()
         exit(-1);
     }
 
-    printf("Recived all clients\n");
+    //printf("Recived all clients\n");
 }
 
 
@@ -102,7 +102,7 @@ void send_clients()
     struct sockaddr_un addr;
     int unixSock_fd, unixConnSock;
 
-    printf("Server branch %d sending clients\n", getpid());
+    //printf("Server branch %d sending clients\n", getpid());
 
     if((unixSock_fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1){
         perror("Unable to create unix socket: ");
@@ -164,7 +164,7 @@ void send_clients()
         return;
     }
 
-    printf("Sent all clients\n");
+    //printf("Sent all clients\n");
     if(close(unixConnSock) == -1){
         perror("Error in close connection unix socket (send_clients)");
         exit(-1);
@@ -185,7 +185,7 @@ void send_clients()
 //the handler decided if the server branch should send or revice clients:
 void send_or_recive()
 {
-    printf("shouldRecive: %d of pid :%d\n", *shouldRecive, getpid());
+    //printf("shouldRecive: %d of pid :%d\n", *shouldRecive, getpid());
 
     if(*shouldRecive){
         recive_clients();

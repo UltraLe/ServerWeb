@@ -9,6 +9,7 @@
 #include <sys/time.h>
 #include <time.h>
 #include <asm/errno.h>
+#include <pthread.h>
 #include "writen.h"
 
 #define READ_BUFFER_BYTE 4096
@@ -31,17 +32,23 @@ int lastClientNumWhenChecked = 0;
 short serverIsFull = 0;
 
 //TODO variable used for detect loop bug, remove when is solved
-int lastFdServed = 0, strike;
+//int lastFdServed = 0, strike;
 
-fd_set readSet, allSet;
+fd_set readSet, allSet, writeSet;
 int numSetsReady = 0, max_fd;
+
+sem_t remaningToServe;
+sem_t allServed;
+sem_t clientToServe;
+//each client has to be removed atomically
+sem_t removing;
 
 #include "checkClientPercentage.h"
 
 //functions that insert a new client into the connected client list
 int insert_new_client(int connect_fd, struct sockaddr_in clientAddress)
 {
-    printf("\tServer branch with pid %d inserting client...\n", getpid());
+    //printf("\tServer branch with pid %d inserting client...\n", getpid());
 
 
     struct client_list *new_entry;
@@ -70,6 +77,12 @@ int insert_new_client(int connect_fd, struct sockaddr_in clientAddress)
     (new_entry->client).fd = connect_fd;
     (new_entry->client).client_addr = clientAddress;
     (new_entry->client).last_time_active = time(0);
+
+    //initializing the semaphore used by the writer threads
+    if (sem_init(&((new_entry->client).serving), 1, 1) == -1) {
+        perror("Error in sem_init (serving): ");
+        exit(-1);
+    }
 
     //inserting client into the set
     FD_SET(connect_fd, &allSet);
@@ -108,7 +121,13 @@ int insert_new_client(int connect_fd, struct sockaddr_in clientAddress)
 //function that close (and remove) a client connection
 int remove_client(struct client_info client)
 {
-    printf("\tServer branch with pid %d into remove_client\n", getpid());
+    //printf("\tServer branch with pid %d into remove_client\n", getpid());
+    
+    //acquiring semaphore to remove
+    if(sem_wait(&removing) == -1){
+        perror("Error in sem_wait (removing)");
+        exit(-1);
+    }
 
     for(struct client_list *current = firstConnectedClient; current != NULL; current = current->next){
 
@@ -121,7 +140,7 @@ int remove_client(struct client_info client)
             }
 
             //remove client from allSet
-            printf("Removing %d\n", client.fd);
+            //printf("Removing %d\n", client.fd);
             FD_CLR(client.fd, &allSet);
 
 
@@ -170,13 +189,19 @@ int remove_client(struct client_info client)
 
             //TODO qui aggiornamento file log
 
-            printf("\tServer branch with pid %d client removed\n", getpid());
+            //printf("\tServer branch with pid %d client removed\n", getpid());
+
+            //posting semaphore to remove
+            if(sem_post(&removing) == -1){
+                perror("Error in sem_wait (removing)");
+                exit(-1);
+            }
 
             return 0;
         }
     }
 
-    printf("\tServer branch with pid %d fd to remove not found\n", getpid());
+    //printf("\tServer branch with pid %d fd to remove not found\n", getpid());
 
     return -1;
 }
@@ -184,105 +209,7 @@ int remove_client(struct client_info client)
 
 
 #include "branchEventsHandlers.h"
-
-
-
-//function that handles a client HTTP request
-int handleRequest(struct client_info *client)
-{
-    printf("\tServer branch with pid %d before shitty variable\n", getpid());
-
-    int numByteRead;
-    char readBuffer[READ_BUFFER_BYTE];
-    memset(readBuffer, 0, sizeof(readBuffer));
-
-    char *writeBuffer;
-
-    printf("\tServer branch with pid %d after shitty variable\n", getpid());
-
-    if(FD_ISSET(client->fd, &readSet)){
-
-        //TODO used for loop detection, remove
-        if(lastFdServed == client->fd) {
-            strike++;
-        }else{
-            lastFdServed = client->fd;
-            strike = 0;
-        }
-
-        //USATO PER TEST RIMUOVERE
-        char *http_header = "HTTP/1.1 200 OK\nVary: Accept-Encoding\nContent-Type: text/html\nAccept-Ranges: bytes\nLast-Modified: Mon, 17 Jul 2017 19:28:15 GMT\nContent-Length: 180\nDate: Sun, 14 Jul 2019 10:44:37 GMT\nServer: lighttpd/1.4.35";
-        char *http_body = "\n\n<!DOCTYPE html>\n"
-                          "<html>\n"
-                          "<body>\n"
-                          "<h1>Hello World !</h1>\n"
-                          "<p></p>\n"
-                          "<h1>Ciao Mondo !</h1>\n"
-                          "<p>(per Giovanni)</p>\n"
-                          "<h1>Bella Fra !</h1>\n"
-                          "<p>(per Riccardo)</p>\n"
-                          "<h1>UuuuoooOOoooo !</h1>\n"
-                          "<p>(per Ezio)</p>\n"
-                          "</body>\n"
-                          "</html>";
-
-        char http[4096];
-        memset(http, 0, 4096);
-        strcat(http, http_header);
-        strcat(http, http_body);
-        //FINE ROBA DA TOGLIERE DOPO IL MERGE
-
-        //removing client->fd from readSet  in order to prevent loops
-        //if loop is still present, it is a telnet problem, test with httperf
-
-        FD_CLR(client->fd, &readSet);
-
-        printf("\tServer branch wih pid: %d reading from %d\n",getpid(), client->fd);
-
-        if((numByteRead = read(client->fd, readBuffer, sizeof(readBuffer))) == 0){
-            //client has closed connection
-            if(remove_client(*client) == -1){
-                printf("Error: could not remove the client (handleRequest)\n");
-                return -1;
-            }
-        }else if(numByteRead == -1) {
-            perror("Error in read client information: ");
-
-            //TODO handle resetting connection requested by peers
-
-            remove_client(*client);
-
-            return -1;
-        }else{
-
-            //Updating client's last time active
-            client->last_time_active = time(0);
-
-            printf("\tServer branch wih pid: %d writing to %d\n",getpid(), client->fd);
-
-            //USATA PER TEST
-            if(writen(client->fd, http, strlen(http)) < 0){
-                perror("Error in writen (unable to reply): ");
-                return -1;
-            }
-            //FINE ROBA DA TOGLIERE DOPO IL MERGE
-
-            //TODO qui funzioni che gestiscono
-            //TODO richiesta HTTP
-            //TODO elaborazione coefficiente di adattamento
-            //TODO accesso in cache per (eventualmente) prelevare l'immagine
-            //TODO invio della risposta HTTP
-            //TODO inserimento (eventuale) dell'immagine adattata in cache
-        }
-
-        numSetsReady--;
-
-        printf("\tServer branch with pid %d has finisched to handle the request\n", getpid());
-
-    }
-
-    return 0;
-}
+#include "writerThread.h"
 
 
 
@@ -323,7 +250,7 @@ int main(int argc, char **argv)
     //going to the correct position of the ''array''
     talkToHandler += position;
 
-    printf("Given position from (talkToHandler): %p to (talkToHandler+1):%p\n", talkToHandler, talkToHandler+1);
+    //printf("Given position from (talkToHandler): %p to (talkToHandler+1):%p\n", talkToHandler, talkToHandler+1);
 
     //initializing data which will be used to talk with the handler
     actual_clients = &(talkToHandler->active_clients);
@@ -383,6 +310,37 @@ int main(int argc, char **argv)
     ///here starts the main body of the server branch
     int connect_fd, tryWaitRet;
 
+    //initializing semaphores used by writer threads
+    if (sem_init(&remaningToServe, 1, 1) == -1) {
+        perror("Error in sem_init (remaningToServe): ");
+        exit(-1);
+    }
+
+    if (sem_init(&clientToServe, 1, 0) == -1) {
+        perror("Error in sem_init (clientToServe): ");
+        exit(-1);
+    }
+
+    if (sem_init(&allServed, 1, 0) == -1) {
+        perror("Error in sem_init (allServed): ");
+        exit(-1);
+    }
+    
+    //semaphore uset to stnchronize writers while removing clients
+    if (sem_init(&removing, 1, 1) == -1) {
+        perror("Error in sem_init (remaningToServe): ");
+        exit(-1);
+    }
+
+    pthread_t pidt;
+
+    for(int i = 0; i < NUM_WRITERS; ++i){
+        if(pthread_create(&pidt, NULL, (void *)handleRequest, NULL)){
+            perror("Error in create writers");
+            exit(-1);
+        }
+    }
+
     struct sockaddr_in acceptedClientAddress;
     socklen_t lenCliAddr;
 
@@ -416,7 +374,7 @@ int main(int argc, char **argv)
         //resetting readSet
         readSet = allSet;
 
-        printf("\tServer branch with pid %d waiting on the select\n", getpid());
+        //printf("\tServer branch with pid %d waiting on the select\n", getpid());
 
         if((numSetsReady = (select(max_fd + 1, &readSet, NULL, NULL, NULL))) == -1){
 
@@ -431,7 +389,7 @@ int main(int argc, char **argv)
         //TRYING to establish a connection with a client
         while(FD_ISSET(handler_info->listen_fd, &readSet)) {
 
-            printf("\tServer branch wih pid: %d in trywait\n", getpid());
+            //printf("\tServer branch wih pid: %d in trywait\n", getpid());
 
             //acquiring semaphore on the listening socket
             tryWaitRet = sem_trywait(&(handler_info->sem_toListenFd));
@@ -439,7 +397,7 @@ int main(int argc, char **argv)
             if (errno == EAGAIN) {
                 //handle other client requests (if there are any) if sempahore was not acquired
 
-                printf("\tServer branch wih pid: %d did not acquired semaphore\n", getpid());
+                //printf("\tServer branch wih pid: %d did not acquired semaphore\n", getpid());
                 numSetsReady--;
                 break;
 
@@ -455,7 +413,7 @@ int main(int argc, char **argv)
                 exit(-1);
             }
 
-            printf("\tServer branch wih pid: %d acquired semaphore\n", getpid());
+            //printf("\tServer branch wih pid: %d acquired semaphore\n", getpid());
 
             memset(&acceptedClientAddress, 0, sizeof(acceptedClientAddress));
 
@@ -470,7 +428,7 @@ int main(int argc, char **argv)
                 checkListenSet = listenSet;
 
                 thereIsClient = select((handler_info->listen_fd) + 1, &checkListenSet, NULL, NULL, &time);
-                printf("Polling DONE, thereIsClient: %d\n", thereIsClient);
+                //printf("Polling DONE, thereIsClient: %d\n", thereIsClient);
 
                 //posting the semaphore, if there are no client to accept
                 if(thereIsClient == 0) {
@@ -499,7 +457,7 @@ int main(int argc, char **argv)
 
             while (thereIsClient){
 
-                printf("There is a client\n");
+                //printf("There is a client\n");
 
                 //if the branch is here he has to take care of the connection :)
                 connect_fd = accept(handler_info->listen_fd, (struct sockaddr *) &acceptedClientAddress, &lenCliAddr);
@@ -516,15 +474,15 @@ int main(int argc, char **argv)
                     perror("Error in accept");
                     exit(-1);
                 }
-
                 //posting the semaphore, once accepted the connection
                 if (sem_post(&(handler_info->sem_toListenFd)) == -1) {
                     perror("Error in sem_post (sem_toListenFd): ");
                     exit(-1);
                 }
 
-                printf("\tServer branch wih pid: %d has posted semaphore\n", getpid());
+                //printf("\tServer branch wih pid: %d has posted semaphore\n", getpid());
 
+                //TODO loop may be caused by this, to fix later
                 if (insert_new_client(connect_fd, acceptedClientAddress) == -1) {
                     printf("Cannot accept client, max capacity has been reached\n");
                 }
@@ -536,7 +494,7 @@ int main(int argc, char **argv)
                     serverIsFull = 1;
                 }
 
-                printf("\tServer branch with pid %d has inserted clients\n", getpid());
+               //printf("\tServer branch with pid %d has inserted clients\n", getpid());
 
                 break;
             }
@@ -552,39 +510,35 @@ int main(int argc, char **argv)
         if (numSetsReady <= 0)
             continue;
 
-        printf("\tServer branch with pid %d has numSetsReady = %d, starting handling clients\n", getpid(), numSetsReady);
+        //right here numSetsReady contain the clients that need to be served
+        //increasing remaining to serve
 
-        for(struct client_list *current = firstConnectedClient; current != NULL && numSetsReady > 0; current = current->next){
-
-            printf("\tServer branch with pid %d in for\n", getpid());
-
-            if(handleRequest(&(current->client)) == -1){
-                printf("Error: could not handleRequest (main)\n");
-                //numSetsReady--;
-                continue;
+        //coping the sets to be served into writeSet
+        writeSet = readSet;
+        int numToWait = numSetsReady;
+        //posting 'numSetsReady' times, allowing 'numSetsReady' writers to 'activate'
+        for(int i = 0; i < numToWait; ++i) {
+            if (sem_post(&clientToServe) == -1) {
+                perror("Error in sem_post (clientToServe): ");
+                exit(-1);
             }
-
-            printf("\tServer branch with pid %d in for, after handler_request\n", getpid());
-
         }
 
-        printf("\tServer branch with pid %d has finisched to handle the clients (numSetsReady = %d)\n", getpid(), numSetsReady);
+        //waiting the writers to complete their job, if the server branch
+        //would not wait them, the writeSet would be overwritten, and
+        //the requests of clients would be lost
+        printf("Actual numSetsReady: %d\n", numSetsReady);
 
-        //loop is detected
-        if(strike > 10) {
-            printf("\n\nLOOP DETECTED !!!!!!!!!\n\n");
-            sleep(1);
+        for(int i = 0; i < numToWait; ++i){
+            if (sem_wait(&allServed) == -1) {
+                perror("Error in sem_post (allServed): ");
+                exit(-1);
+            }
         }
+
+        //here numSetsReady should be 0
+        if(numSetsReady > 0)
+            printf("Something went erong, numsetsReady: %d\n", numSetsReady);
+
     }
 }
-
-/*
- * Server branch solo quando è piena a volte risponde in loop un client          ?  (Da trovare)
- *
- *                                                                                  Fare un loop detector contando il numero di
- *                                                                                  richieste consecutive di client (file descriptor)
- *                                                                                  uguali, se le richieste consegutive sono > 5, loop beccato.
- *                                                                                  se il loop è beccato allora mettere uno sleep(1).
- *
- *
- */

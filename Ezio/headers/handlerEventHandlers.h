@@ -24,7 +24,7 @@ void clients_has_changed()
     //the 2 branches with less number of connected clients will be selected
     //and eventually used in merge_branches
 
-    printf("Recived SIGUSR1 in handler, client has changed\n");
+    //printf("Recived SIGUSR1 in handler, client has changed\n");
 
     int min = MAX_CLI_PER_SB+1;
     int veryMin = min;
@@ -96,5 +96,5 @@ void clients_has_changed()
 
     }
 
-    branchesStatus();
+    //branchesStatus();
 }
