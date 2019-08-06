@@ -532,6 +532,7 @@ int main(int argc, char **argv)
                     printf("Cannot accept client, error in insert_new_client\n");
                 }
 
+
                 //if the server branch
                 //reaches the max capacity, ignore the next connections
                 if ((*actual_clients) == MAX_CLI_PER_SB) {
