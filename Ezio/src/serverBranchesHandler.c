@@ -69,7 +69,7 @@ int create_new_branch()
     //finding a position of the array_hb...
     int pos = look_for_first_array_pos();
     
-    printf("\n\nFound %d POSITION, giving from (array+pos): %p to (attay+pos+1): %p\n\n", pos, array_hb+pos, array_hb+pos+1);
+    //printf("\n\nFound %d POSITION, giving from (array+pos): %p to (attay+pos+1): %p\n\n", pos, array_hb+pos, array_hb+pos+1);
 
     //preparing data for the new entry
     if((new_entry = (struct branches_info_list *)malloc(sizeof(struct branches_info_list))) == NULL){
@@ -160,7 +160,7 @@ int merge_branches(int pid_clientReciver, struct branch_handler_communication *r
         exit(-1);
     }
 
-    printf("Clients of process '%d' were transmitted to process '%d'\n", pid_clientSender, pid_clientReciver);
+    //printf("Clients of process '%d' were transmitted to process '%d'\n", pid_clientSender, pid_clientReciver);
 
     //removing sender branch information from the structure branches_info
     for(struct branches_info_list *current = first_branch_info; ; current = current->next){

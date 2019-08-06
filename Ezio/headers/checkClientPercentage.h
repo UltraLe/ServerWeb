@@ -8,7 +8,7 @@
 void checkClientPercentage()
 {
 
-    printf("Called percentage checker\n");
+    //printf("Called percentage checker\n");
 
     //TODO edit nicenes according to active connections
 
@@ -17,7 +17,7 @@ void checkClientPercentage()
     //calculating 'OLD' percentage of connected clients
     old_perc = (float)(lastClientNumWhenChecked*100)/MAX_CLI_PER_SB;
 
-    printf("lastClientNum: %d, old_perc: %f\n", lastClientNumWhenChecked, old_perc);
+    //printf("lastClientNum: %d, old_perc: %f\n", lastClientNumWhenChecked, old_perc);
 
     if (0 <= old_perc && old_perc < SIGNAL_PERC1*100) {
         old_perc = 1;
@@ -55,6 +55,9 @@ void checkClientPercentage()
         return;
     }
 
+    //TODO uncomment before deploy (run with sudo)
+
+    /*
     int priority = 0;
 
     //every time that OLD PERF is different than NEW PERC,
@@ -91,8 +94,9 @@ void checkClientPercentage()
             perror("Error in setpriority");
         }
     }
+     */
 
-    printf("Percentage checked, old_perc: %f, new_perc: %f\n", old_perc, new_perc);
+    //printf("Percentage checked, old_perc: %f, new_perc: %f\n", old_perc, new_perc);
 
     //else dont do anything, the number of connected clients is stable
 }

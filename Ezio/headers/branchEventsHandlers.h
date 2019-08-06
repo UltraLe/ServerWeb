@@ -185,7 +185,7 @@ void send_clients()
 //the handler decided if the server branch should send or revice clients:
 void send_or_recive()
 {
-    printf("shouldRecive: %d of pid :%d\n", *shouldRecive, getpid());
+    //printf("shouldRecive: %d of pid :%d\n", *shouldRecive, getpid());
 
     if(*shouldRecive){
         recive_clients();

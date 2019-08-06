@@ -31,7 +31,7 @@ int lastClientNumWhenChecked = 0;
 short serverIsFull = 0;
 
 //TODO variable used for detect loop bug, remove when is solved
-int lastFdServed = 0, strike;
+//int lastFdServed = 0, strike;
 
 fd_set readSet, allSet;
 int numSetsReady = 0, max_fd;
@@ -41,7 +41,7 @@ int numSetsReady = 0, max_fd;
 //functions that insert a new client into the connected client list
 int insert_new_client(int connect_fd, struct sockaddr_in clientAddress)
 {
-    printf("\tServer branch with pid %d inserting client...\n", getpid());
+    //printf("\tServer branch with pid %d inserting client...\n", getpid());
 
 
     struct client_list *new_entry;
@@ -108,7 +108,7 @@ int insert_new_client(int connect_fd, struct sockaddr_in clientAddress)
 //function that close (and remove) a client connection
 int remove_client(struct client_info client)
 {
-    printf("\tServer branch with pid %d into remove_client\n", getpid());
+    //printf("\tServer branch with pid %d into remove_client\n", getpid());
 
     for(struct client_list *current = firstConnectedClient; current != NULL; current = current->next){
 
@@ -121,7 +121,8 @@ int remove_client(struct client_info client)
             }
 
             //remove client from allSet
-            printf("Removing %d\n", client.fd);
+            //printf("Removing %d\n", client.fd);
+
             FD_CLR(client.fd, &allSet);
 
 
@@ -170,13 +171,13 @@ int remove_client(struct client_info client)
 
             //TODO qui aggiornamento file log
 
-            printf("\tServer branch with pid %d client removed\n", getpid());
+            //printf("\tServer branch with pid %d client removed\n", getpid());
 
             return 0;
         }
     }
 
-    printf("\tServer branch with pid %d fd to remove not found\n", getpid());
+    //printf("\tServer branch with pid %d fd to remove not found\n", getpid());
 
     return -1;
 }
@@ -190,7 +191,7 @@ int remove_client(struct client_info client)
 //function that handles a client HTTP request
 int handleRequest(struct client_info *client)
 {
-    printf("\tServer branch with pid %d before shitty variable\n", getpid());
+    //printf("\tServer branch with pid %d before shitty variable\n", getpid());
 
     int numByteRead;
     char readBuffer[READ_BUFFER_BYTE];
@@ -198,17 +199,19 @@ int handleRequest(struct client_info *client)
 
     char *writeBuffer;
 
-    printf("\tServer branch with pid %d after shitty variable\n", getpid());
+    //printf("\tServer branch with pid %d after shitty variable\n", getpid());
 
     if(FD_ISSET(client->fd, &readSet)){
 
         //TODO used for loop detection, remove
+        /*
         if(lastFdServed == client->fd) {
             strike++;
         }else{
             lastFdServed = client->fd;
             strike = 0;
         }
+         */
 
         //USATO PER TEST RIMUOVERE
         char *http_header = "HTTP/1.1 200 OK\nVary: Accept-Encoding\nContent-Type: text/html\nAccept-Ranges: bytes\nLast-Modified: Mon, 17 Jul 2017 19:28:15 GMT\nContent-Length: 180\nDate: Sun, 14 Jul 2019 10:44:37 GMT\nServer: lighttpd/1.4.35";
@@ -237,7 +240,7 @@ int handleRequest(struct client_info *client)
 
         FD_CLR(client->fd, &readSet);
 
-        printf("\tServer branch wih pid: %d reading from %d\n",getpid(), client->fd);
+        //printf("\tServer branch wih pid: %d reading from %d\n",getpid(), client->fd);
 
         if((numByteRead = read(client->fd, readBuffer, sizeof(readBuffer))) == 0){
             //client has closed connection
@@ -258,7 +261,7 @@ int handleRequest(struct client_info *client)
             //Updating client's last time active
             client->last_time_active = time(0);
 
-            printf("\tServer branch wih pid: %d writing to %d\n",getpid(), client->fd);
+            //printf("\tServer branch wih pid: %d writing to %d\n",getpid(), client->fd);
 
             //USATA PER TEST
             if(writen(client->fd, http, strlen(http)) < 0){
@@ -277,7 +280,7 @@ int handleRequest(struct client_info *client)
 
         numSetsReady--;
 
-        printf("\tServer branch with pid %d has finisched to handle the request\n", getpid());
+        //printf("\tServer branch with pid %d has finisched to handle the request\n", getpid());
 
     }
 
@@ -285,7 +288,7 @@ int handleRequest(struct client_info *client)
 }
 
 
-
+//remove after testing operations
 void clientStatus(int pos)
 {
     printf("\nChild %d, pid %d\n", pos, getpid());
@@ -323,7 +326,7 @@ int main(int argc, char **argv)
     //going to the correct position of the ''array''
     talkToHandler += position;
 
-    printf("Given position from (talkToHandler): %p to (talkToHandler+1):%p\n", talkToHandler, talkToHandler+1);
+    //printf("Given position from (talkToHandler): %p to (talkToHandler+1):%p\n", talkToHandler, talkToHandler+1);
 
     //initializing data which will be used to talk with the handler
     actual_clients = &(talkToHandler->active_clients);
@@ -406,7 +409,7 @@ int main(int argc, char **argv)
 
     max_fd = handler_info->listen_fd;
 
-    printf("\tServer branch with pid %d ready\n", getpid());
+    //printf("\tServer branch with pid %d ready\n", getpid());
     //ready to serve clients
     while(1){
 
@@ -416,7 +419,7 @@ int main(int argc, char **argv)
         //resetting readSet
         readSet = allSet;
 
-        printf("\tServer branch with pid %d waiting on the select\n", getpid());
+        //printf("\tServer branch with pid %d waiting on the select\n", getpid());
 
         if((numSetsReady = (select(max_fd + 1, &readSet, NULL, NULL, NULL))) == -1){
 
@@ -431,7 +434,7 @@ int main(int argc, char **argv)
         //TRYING to establish a connection with a client
         while(FD_ISSET(handler_info->listen_fd, &readSet)) {
 
-            printf("\tServer branch wih pid: %d in trywait\n", getpid());
+            //printf("\tServer branch wih pid: %d in trywait\n", getpid());
 
             //acquiring semaphore on the listening socket
             tryWaitRet = sem_trywait(&(handler_info->sem_toListenFd));
@@ -439,7 +442,7 @@ int main(int argc, char **argv)
             if (errno == EAGAIN) {
                 //handle other client requests (if there are any) if sempahore was not acquired
 
-                printf("\tServer branch wih pid: %d did not acquired semaphore\n", getpid());
+                //printf("\tServer branch wih pid: %d did not acquired semaphore\n", getpid());
                 numSetsReady--;
                 break;
 
@@ -455,7 +458,7 @@ int main(int argc, char **argv)
                 exit(-1);
             }
 
-            printf("\tServer branch wih pid: %d acquired semaphore\n", getpid());
+            //printf("\tServer branch wih pid: %d acquired semaphore\n", getpid());
 
             memset(&acceptedClientAddress, 0, sizeof(acceptedClientAddress));
 
@@ -470,7 +473,7 @@ int main(int argc, char **argv)
                 checkListenSet = listenSet;
 
                 thereIsClient = select((handler_info->listen_fd) + 1, &checkListenSet, NULL, NULL, &time);
-                printf("Polling DONE, thereIsClient: %d\n", thereIsClient);
+                //printf("Polling DONE, thereIsClient: %d\n", thereIsClient);
 
                 //posting the semaphore, if there are no client to accept
                 if(thereIsClient == 0) {
@@ -499,7 +502,7 @@ int main(int argc, char **argv)
 
             while (thereIsClient){
 
-                printf("There is a client\n");
+                //printf("There is a client\n");
 
                 //if the branch is here he has to take care of the connection :)
                 connect_fd = accept(handler_info->listen_fd, (struct sockaddr *) &acceptedClientAddress, &lenCliAddr);
@@ -523,10 +526,10 @@ int main(int argc, char **argv)
                     exit(-1);
                 }
 
-                printf("\tServer branch wih pid: %d has posted semaphore\n", getpid());
+                //printf("\tServer branch wih pid: %d has posted semaphore\n", getpid());
 
                 if (insert_new_client(connect_fd, acceptedClientAddress) == -1) {
-                    printf("Cannot accept client, max capacity has been reached\n");
+                    printf("Cannot accept client, error in insert_new_client\n");
                 }
 
                 //if the server branch
@@ -536,7 +539,7 @@ int main(int argc, char **argv)
                     serverIsFull = 1;
                 }
 
-                printf("\tServer branch with pid %d has inserted clients\n", getpid());
+                //printf("\tServer branch with pid %d has inserted clients\n", getpid());
 
                 break;
             }
@@ -552,11 +555,11 @@ int main(int argc, char **argv)
         if (numSetsReady <= 0)
             continue;
 
-        printf("\tServer branch with pid %d has numSetsReady = %d, starting handling clients\n", getpid(), numSetsReady);
+        //printf("\tServer branch with pid %d has numSetsReady = %d, starting handling clients\n", getpid(), numSetsReady);
 
         for(struct client_list *current = firstConnectedClient; current != NULL && numSetsReady > 0; current = current->next){
 
-            printf("\tServer branch with pid %d in for\n", getpid());
+            //printf("\tServer branch with pid %d in for\n", getpid());
 
             if(handleRequest(&(current->client)) == -1){
                 printf("Error: could not handleRequest (main)\n");
@@ -564,27 +567,18 @@ int main(int argc, char **argv)
                 continue;
             }
 
-            printf("\tServer branch with pid %d in for, after handler_request\n", getpid());
+            //printf("\tServer branch with pid %d in for, after handler_request\n", getpid());
 
         }
 
-        printf("\tServer branch with pid %d has finisched to handle the clients (numSetsReady = %d)\n", getpid(), numSetsReady);
+        //printf("\tServer branch with pid %d has finisched to handle the clients (numSetsReady = %d)\n", getpid(), numSetsReady);
 
         //loop is detected
+        /*
         if(strike > 10) {
             printf("\n\nLOOP DETECTED !!!!!!!!!\n\n");
             sleep(1);
         }
+         */
     }
 }
-
-/*
- * Server branch solo quando è piena a volte risponde in loop un client          ?  (Da trovare)
- *
- *                                                                                  Fare un loop detector contando il numero di
- *                                                                                  richieste consecutive di client (file descriptor)
- *                                                                                  uguali, se le richieste consegutive sono > 5, loop beccato.
- *                                                                                  se il loop è beccato allora mettere uno sleep(1).
- *
- *
- */
