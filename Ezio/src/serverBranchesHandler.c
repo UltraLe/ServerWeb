@@ -19,6 +19,7 @@ struct branches_info_list *last_branch_info;
 
 struct branch_handler_communication *array_hb;
 
+#include "loggerManager.h"
 
 
 //Used for testing, remove before deploy
@@ -207,7 +208,7 @@ int merge_branches(int pid_clientReciver, struct branch_handler_communication *r
 int main(int argc, char **argv) {
     int id_info, id_hb;
     pid_t my_pid;
-    sem_t sem_tolistenfd, sem_trasfclients, sem_sendrecive;
+    sem_t sem_tolistenfd, sem_trasfclients, sem_sendrecive, sem_awakeloggermanager;
 
     int listen_fd;
     struct sockaddr_in address;
@@ -271,6 +272,14 @@ int main(int argc, char **argv) {
         exit(-1);
     }
 
+    //initializing semaphore used to awake the logger manager in order to
+    //sort chronologically and copy on
+    //disk the logs of each server branch
+    if (sem_init(&sem_awakeloggermanager, 1, 0) == -1) {
+        perror("Error in sem_init (sem_awakeloggermanager): ");
+        exit(-1);
+    }
+
     //initializing listening socket
     memset(&address, 0, sizeof(address));
     address.sin_addr.s_addr = htonl(SERVER_ADDR);
@@ -311,6 +320,7 @@ int main(int argc, char **argv) {
     info->sem_toListenFd = sem_tolistenfd;
     info->sem_transfClients = sem_trasfclients;
     info->sem_sendRecive = sem_sendrecive;
+    info->sem_awakeLoggerManager = sem_awakeloggermanager;
 
     //when the number of the active clients of a branch get to the 10%, 50% and 80%
     //of MAX_CLI_PER_SB, it signals the creator with SIGUSR1.
@@ -338,6 +348,12 @@ int main(int argc, char **argv) {
     printf("Shared memory initialized\n");
 
     printf("CHK_PERC_EACH: %d\n", CHECK_PERC_EACH);
+
+    //creating logger manager
+    if(pthread_create(NULL, (void *)loggerManager, NULL)){
+        perror("Error in pthread_create (loggerManager)");
+        exit(-1);
+    }
 
     //generating the initial server branches
     for(int i = 0; i < NUM_INIT_SB; ++i) {

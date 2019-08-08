@@ -38,6 +38,13 @@ int numSetsReady = 0, max_fd;
 
 #include "checkClientPercentage.h"
 
+struct log logs[MAX_LOGS_PER_BRANCH];
+int numLogs = 0;
+sem_t sem_on_logs;
+
+#include "logger.h"
+
+
 //functions that insert a new client into the connected client list
 int insert_new_client(int connect_fd, struct sockaddr_in clientAddress)
 {
@@ -74,8 +81,6 @@ int insert_new_client(int connect_fd, struct sockaddr_in clientAddress)
     //inserting client into the set
     FD_SET(connect_fd, &allSet);
 
-    //TODO qui aggiornamento del file log ?
-
     if(connect_fd > max_fd) {
         max_fd = connect_fd;
     }
@@ -96,6 +101,10 @@ int insert_new_client(int connect_fd, struct sockaddr_in clientAddress)
         lastConnectedClient = lastConnectedClient->next;
         lastConnectedClient->next = NULL;
     }
+
+    //updating log
+    if(LOG(CLIENT_ACCEPTED, clientAddress) == -1)
+        printf("Error in LOG (client accepted)\n");
 
     if(abs(*(actual_clients)-lastClientNumWhenChecked) >= CHECK_PERC_EACH)
         checkClientPercentage();
@@ -169,7 +178,8 @@ int remove_client(struct client_info client)
             if(abs(*(actual_clients)-lastClientNumWhenChecked) >= CHECK_PERC_EACH)
                 checkClientPercentage();
 
-            //TODO qui aggiornamento file log
+            if(LOG(CLIENT_REMOVED, client.client_addr) == -1)
+                printf("Error in LOG (client removed)\n");
 
             //printf("\tServer branch with pid %d client removed\n", getpid());
 
@@ -243,19 +253,26 @@ int handleRequest(struct client_info *client)
         //printf("\tServer branch wih pid: %d reading from %d\n",getpid(), client->fd);
 
         if((numByteRead = read(client->fd, readBuffer, sizeof(readBuffer))) == 0){
+
             //client has closed connection
             if(remove_client(*client) == -1){
                 printf("Error: could not remove the client (handleRequest)\n");
                 return -1;
             }
+
+            if(LOG(CLIENT_DISCONNECTED, client->client_addr) == -1)
+                printf("Error in LOG (client disconnected)");
+
         }else if(numByteRead == -1) {
             perror("Error in read client information: ");
 
-            //TODO handle resetting connection requested by peers
+            if(LOG(CLIENT_ERROR_READ, client->client_addr) == -1)
+                printf("Error in LOG (error read)");
 
             remove_client(*client);
 
             return -1;
+
         }else{
 
             //Updating client's last time active
@@ -276,6 +293,9 @@ int handleRequest(struct client_info *client)
             //TODO accesso in cache per (eventualmente) prelevare l'immagine
             //TODO invio della risposta HTTP
             //TODO inserimento (eventuale) dell'immagine adattata in cache
+
+            if(LOG(CLIENT_SERVED, client->client_addr) == -1)
+                printf("Error in LOG (client served)");
         }
 
         numSetsReady--;
@@ -381,6 +401,20 @@ int main(int argc, char **argv)
     }
     //starting its timer
     alarm(CLEANER_CHECK_SEC);
+
+    //initializion semaphore used to synchronize logger and logger and server branch
+    if(sem_init(&sem_on_logs, 1, 1) == -1){
+        perror("Error in sem_init (sem_on_logs)");
+        exit(-1);
+    }
+
+    pid_t logger;
+
+    //creating logger
+    if(pthread_create(&logger, NULL, (void *)logger, NULL)){
+        perror("Error in pthread_create (logger)");
+        exit(-1);
+    }
 
 
     ///here starts the main body of the server branch
