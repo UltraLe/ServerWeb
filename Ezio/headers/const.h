@@ -71,29 +71,7 @@
 
 #define BACKLOG 512
 
-#define MAX_LOGS_PER_BRANCH MAX_CLI_PER_SB*3    //used to define the length of the vector used by a branch
-                                                //to collect the client logs
-
-#define CLIENT_ACCEPTED 1                       //log types
-
-#define CLIENT_REMOVED 2
-
-#define CLIENT_SERVED 3
-
-#define CLIENT_ERROR_READ 4
-
-#define CLIENT_DISCONNECTED 5
-
-#define WRITE_ON_DISK_TIMER_SEC 5                //time after which logs of each server branch will
-                                                 //be copied on disk
-
-#define LOG_FILENAME "serverLog.txt"
-
-struct log{
-    clock_t log_time;
-    int log_type;
-    struct sockaddr_in client;
-};
+#include "loggingConst.h"
 
 
 char *socket_path = "\0hidden"; //strings that identifies the AF_UNIX socket

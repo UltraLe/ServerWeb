@@ -356,7 +356,7 @@ int main(int argc, char **argv)
     talkToHandler->branch_pid = pid;
     sem_cli = &(talkToHandler->sem_toNumClients);
     shouldRecive = &(talkToHandler->recive_clients);
-    loggerLogs = &(talkToHandler->loggerLogs);
+    loggerLogs = (talkToHandler->loggerLogs);
 
 
     //attaching to handler 'global' information structure

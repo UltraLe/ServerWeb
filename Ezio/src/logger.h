@@ -61,8 +61,7 @@ void logger()
         for(int i = 0; i < numLogs; ++i)
             loggerLogs[i] = branshLogs[i];
 
-        //TODO implementare come il manager capisce che ha finito i log di una singola branch
-
+        //if there are less logs than MAX_LOGS_PER BRANCH, the logger manager will have to know it
         if(numLogs < MAX_LOGS_PER_BRANCH)
             loggerLogs[numLogs+1].log_type = -1;
 
@@ -75,7 +74,7 @@ void logger()
             return;
         }
 
-        //calling the logger manager,
+        //calling the logger manager
         if(sem_post(&(handler_info->sem_awakeLoggerManager)) == -1){
             perror("Error on sem_post (LOG)");
             return;

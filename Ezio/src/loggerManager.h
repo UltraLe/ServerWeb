@@ -5,8 +5,11 @@
 #include <fcntl.h>
 
 int loggerToWait = 0;
-struct log *sortedLogs;
+//struct log *sortedLogs;
 char *sortedLogsString;
+
+int timeLenTemplate;
+int cliLenTemplate;
 
 
 
@@ -24,9 +27,12 @@ void releaseWaitingLoggers()
 
 
 
-int logToString()
+char *logToString(struct log *currentLog)
 {
+    char *stringLog;
 
+
+    return stringLog;
 }
 
 
@@ -62,16 +68,67 @@ int writeLogsOnDisk()
 
 int sortLoggersLogs()
 {
-    //the number of logs that has to be sorted
-    sortedLogs = (struct log *)malloc(sizeof(struct log)*loggerToWait*MAX_LOGS_PER_BRANCH);
-    if(sortedLogs == NULL){
-        perror("Error in malloc (sortedLogs\n");
+    //vector of idexes
+    int *branchIndex;
+
+    branchIndex = (int *)malloc(sizeof(int)*loggerToWait);
+    if(branchIndex == NULL){
+        perror("Error in malloc (branchIndex\n");
         return -1;
     }
 
-    //TODO sort
+    //initializing indexes
+    for(int i = 0; i < loggerToWait; ++i)
+        branchIndex[i] = 0;
 
-    //TODO call logToString
+    //allocating space for the sorted stringLogs
+    sortedLogsString = (char *)malloc(sizeof(char)*loggerToWait*MAX_LOGS_PER_BRANCH*(MAX_LOG_LEN+cliLenTemplate+timeLenTemplate));
+    clock_t min = clock() + 1;
+    clock_t tempLogClock;
+
+    int j;
+    int minIndex;
+
+    struct log *tempLog;
+
+    for (int i = 0; i < loggerToWait; ) {
+
+        //TODO increase i every time that a log of a server branch is completely read by the manager..
+        //TODO .. increase i every time that log_time[branchIndex[i]] == (-1 || MAX_LOGS_PER BRANCHES)
+
+        j = 0;
+        minIndex = 0;
+
+        for (struct branches_info_list *current = first_branch_info; current != NULL; current = current->next) {
+
+            //main matter
+            tempLog = ((current->info)->loggerLogs);
+            tempLogClock = (tempLog[branchIndex[j]]).log_time;
+
+            //if there are no more logs for the current branch,
+            //increase i, and continue
+            if(tempLog[branchIndex[j]].log_type == -1){
+                ++i;
+                continue;
+            }
+
+            if (tempLogClock < min) {
+                min = tempLogClock;
+                minIndex = j;
+            }
+
+            ++j;
+        }
+
+        //increasing index of branch that has the minimum (in clock) log
+        branchIndex[minIndex]++;
+
+        if(branchIndex[minIndex] == MAX_LOGS_PER_BRANCH)
+            ++i;
+
+    }
+
+
 
 
 }
@@ -80,6 +137,8 @@ int sortLoggersLogs()
 
 void loggerManager()
 {
+    timeLenTemplate = strlen("[Insert time]->");
+    cliLenTemplate = strlen("[000.000.000.000:00000]");
 
     do{
 
@@ -114,12 +173,13 @@ void loggerManager()
         }
 
         //writing on disk
-        if(writeLogsOnDisk(sortedLogs) == -1){
+        if(writeLogsOnDisk() == -1){
             printf("Error on sort loggers logs\n");
             exit(-1);
         }
 
-        free(sortedLogs);
+        //releasing sortedLogsString
+        free(sortedLogsString);
 
         //releasing loggers
         releaseWaitingLoggers();
