@@ -27,7 +27,7 @@ void releaseWaitingLoggers()
 
 
 
-char *logToString(struct log *currentLog)
+char *logToString(struct log currentLog)
 {
     char *stringLog;
 
@@ -90,6 +90,7 @@ int sortLoggersLogs()
     int minIndex;
 
     struct log *tempLog;
+    struct log minLog;
 
     for (int i = 0; i < loggerToWait; ) {
 
@@ -115,6 +116,7 @@ int sortLoggersLogs()
             if (tempLogClock < min) {
                 min = tempLogClock;
                 minIndex = j;
+                minLog = *tempLog;
             }
 
             ++j;
@@ -125,6 +127,9 @@ int sortLoggersLogs()
 
         if(branchIndex[minIndex] == MAX_LOGS_PER_BRANCH)
             ++i;
+
+        //here the minimum has been selected, converted and appended
+        strcat(sortedLogsString, logToString(minLog));
 
     }
 
