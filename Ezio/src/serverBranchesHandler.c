@@ -19,6 +19,8 @@ struct branches_info_list *last_branch_info;
 
 struct branch_handler_communication *array_hb;
 
+sem_t semOnBranchesNum;
+
 #include "loggerManager.h"
 
 
@@ -120,7 +122,17 @@ int create_new_branch()
         exit(-1);
     }
 
+    if(sem_wait(&semOnBranchesNum) == -1){
+        perror("Error on sem_wait (semOnBranchesNum)");
+        exit(-1);
+    }
+
     actual_branches_num++;
+
+    if(sem_post(&semOnBranchesNum) == -1){
+        perror("Error on sem_post (semOnBranchesNum)");
+        exit(-1);
+    }
 
     printf("\t\t\tNew server branch generated\n");
 
@@ -192,7 +204,17 @@ int merge_branches(int pid_clientReciver, struct branch_handler_communication *r
 
     }
 
+    if(sem_wait(&semOnBranchesNum) == -1){
+        perror("Error on sem_wait (semOnBranchesNum)");
+        exit(-1);
+    }
+
     actual_branches_num--;
+
+    if(sem_post(&semOnBranchesNum) == -1){
+        perror("Error on sem_post (semOnBranchesNum)");
+        exit(-1);
+    }
 
     printf("Merge function ended\n");
 
@@ -209,6 +231,7 @@ int main(int argc, char **argv) {
     int id_info, id_hb;
     pid_t my_pid;
     sem_t sem_tolistenfd, sem_trasfclients, sem_sendrecive, sem_awakeloggermanager;
+    sem_t sem_loggermanagerfinished;
 
     int listen_fd;
     struct sockaddr_in address;
@@ -280,6 +303,18 @@ int main(int argc, char **argv) {
         exit(-1);
     }
 
+    //semaphore used to synchronize logger manager and server branhes handler
+    if (sem_init(&semOnBranchesNum, 1, 1) == -1) {
+        perror("Error in sem_init (semOnBranchesNum): ");
+        exit(-1);
+    }
+
+    //semaphore used to tell logger that the manager has finished
+    if (sem_init(&sem_loggermanagerfinished, 1, 0) == -1) {
+        perror("Error in sem_init (semOnBranchesNum): ");
+        exit(-1);
+    }
+
     //initializing listening socket
     memset(&address, 0, sizeof(address));
     address.sin_addr.s_addr = htonl(SERVER_ADDR);
@@ -321,6 +356,7 @@ int main(int argc, char **argv) {
     info->sem_transfClients = sem_trasfclients;
     info->sem_sendRecive = sem_sendrecive;
     info->sem_awakeLoggerManager = sem_awakeloggermanager;
+    info->sem_loggerManagerHasFinished = sem_loggermanagerfinished;
 
     //when the number of the active clients of a branch get to the 10%, 50% and 80%
     //of MAX_CLI_PER_SB, it signals the creator with SIGUSR1.
@@ -349,18 +385,18 @@ int main(int argc, char **argv) {
 
     printf("CHK_PERC_EACH: %d\n", CHECK_PERC_EACH);
 
-    //creating logger manager
-    if(pthread_create(NULL, (void *)loggerManager, NULL)){
-        perror("Error in pthread_create (loggerManager)");
-        exit(-1);
-    }
-
     //generating the initial server branches
     for(int i = 0; i < NUM_INIT_SB; ++i) {
         if (create_new_branch()) {
             printf("Error in create_new_branch (generating point)\n");
             exit(-1);
         }
+    }
+
+    //creating logger manager
+    if(pthread_create(NULL, (void *)loggerManager, NULL)){
+        perror("Error in pthread_create (loggerManager)");
+        exit(-1);
     }
 
     //waiting for signals to come

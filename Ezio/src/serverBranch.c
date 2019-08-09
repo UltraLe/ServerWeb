@@ -38,9 +38,11 @@ int numSetsReady = 0, max_fd;
 
 #include "checkClientPercentage.h"
 
-struct log logs[MAX_LOGS_PER_BRANCH];
+//local logs used by each server branch
+struct log branshLogs[MAX_LOGS_PER_BRANCH];
 int numLogs = 0;
 sem_t sem_on_logs;
+struct log *loggerLogs;
 
 #include "logger.h"
 
@@ -354,6 +356,7 @@ int main(int argc, char **argv)
     talkToHandler->branch_pid = pid;
     sem_cli = &(talkToHandler->sem_toNumClients);
     shouldRecive = &(talkToHandler->recive_clients);
+    loggerLogs = &(talkToHandler->loggerLogs);
 
 
     //attaching to handler 'global' information structure
@@ -408,10 +411,10 @@ int main(int argc, char **argv)
         exit(-1);
     }
 
-    pid_t logger;
+    pid_t loggerPid;
 
     //creating logger
-    if(pthread_create(&logger, NULL, (void *)logger, NULL)){
+    if(pthread_create(&loggerPid, NULL, (void *)logger, NULL)){
         perror("Error in pthread_create (logger)");
         exit(-1);
     }

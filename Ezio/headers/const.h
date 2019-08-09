@@ -87,6 +87,8 @@
 #define WRITE_ON_DISK_TIMER_SEC 5                //time after which logs of each server branch will
                                                  //be copied on disk
 
+#define LOG_FILENAME "serverLog.txt"
+
 struct log{
     clock_t log_time;
     int log_type;
@@ -103,6 +105,9 @@ struct handler_info{
     sem_t sem_toListenFd;                   //semaphore used to synchronize server branches to accept clients connection
     sem_t sem_transfClients;                //semaphore used to synchronize handler and reciver and sender
     sem_t sem_awakeLoggerManager;           //semaphore used to synchronize logger and logger manager
+
+    sem_t sem_loggerManagerHasFinished;     //semaphore used by the loggerManager to tell loggers that their
+                                            //information has been taken
 };
 
 struct branch_handler_communication{
@@ -110,6 +115,7 @@ struct branch_handler_communication{
     int active_clients;
     sem_t sem_toNumClients;                 //semaphore to atomically access to the client's number of a server branch
     int recive_clients;
+    struct log loggerLogs[MAX_LOGS_PER_BRANCH];
 };
 
 struct client_info{
