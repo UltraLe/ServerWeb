@@ -3,6 +3,7 @@
 //
 
 #include <fcntl.h>
+#include <time.h>
 
 int loggerToWait = 0;
 //struct log *sortedLogs;
@@ -29,8 +30,50 @@ void releaseWaitingLoggers()
 
 char *logToString(struct log currentLog)
 {
-    char *stringLog;
+    char stringMessage[MAX_LOG_LEN];
+    char stringClient[cliLenTemplate];
+    char stringTime[timeLenTemplate];
 
+    char *stringLog = malloc(sizeof(char)*(MAX_LOG_LEN+cliLenTemplate+timeLenTemplate));
+    memset(stringLog, 0, sizeof(*stringLog));
+
+    //log time in string
+    struct tm *localTime;
+    localTime = localtime(&(currentLog.log_time));
+    sprintf(stringTime, "[%s]->", asctime(localTime));
+
+    //client info in string
+    strcpy(stringClient, "[");
+    strcpy(stringClient, inet_ntoa(currentLog.client.sin_addr));
+    strcpy(stringClient, ":");
+    sprintf(stringClient, "%d]->", ntohs(currentLog.client.sin_port));
+
+    //client action in string
+    switch(currentLog.log_type){
+        case CLIENT_ACCEPTED:
+            strcpy(stringMessage, CLIENT_ACCEPTED_S);
+            break;
+        case CLIENT_DISCONNECTED:
+            strcpy(stringMessage, CLIENT_DISCONNECTED_S);
+            break;
+        case CLIENT_ERROR_READ:
+            strcpy(stringMessage, CLIENT_ERROR_READ_S);
+            break;
+        case CLIENT_REMOVED:
+            strcpy(stringMessage, CLIENT_REMOVED_S);
+            break;
+        case CLIENT_SERVED:
+            strcpy(stringMessage, CLIENT_SERVED_S);
+            break;
+        case NO_ACTIVITY:
+            strcpy(stringMessage, NO_ACTIVITY_S);
+            break;
+        default:
+            printf("Something went wrong in logToString\n");
+            return NULL;
+    }
+
+    sprintf(stringLog, "%s%s%s", stringTime, stringClient, stringLog);
 
     return stringLog;
 }
@@ -81,10 +124,23 @@ int sortLoggersLogs()
     for(int i = 0; i < loggerToWait; ++i)
         branchIndex[i] = 0;
 
+    //vector used to check if a branch has finished its logs
+    int *branchCompleted;
+
+    branchCompleted = (int *)malloc(sizeof(int)*loggerToWait);
+    if(branchCompleted == NULL){
+        perror("Error in malloc (branchCompleted\n");
+        return -1;
+    }
+
+    //initializing branchCompleted
+    for(int i = 0; i < loggerToWait; ++i)
+        branchCompleted[i] = 0;
+
     //allocating space for the sorted stringLogs
     sortedLogsString = (char *)malloc(sizeof(char)*loggerToWait*MAX_LOGS_PER_BRANCH*(MAX_LOG_LEN+cliLenTemplate+timeLenTemplate));
-    clock_t min = clock() + 1;
-    clock_t tempLogClock;
+    time_t min = time(0) + 1;
+    time_t tempLogClock;
 
     int j;
     int minIndex;
@@ -92,26 +148,35 @@ int sortLoggersLogs()
     struct log *tempLog;
     struct log minLog;
 
-    for (int i = 0; i < loggerToWait; ) {
+    //if any branch has not registered any log,
+    //min log has to specify it
+    minLog.log_type = NO_ACTIVITY;
+    minLog.log_time = time(0);
+    minLog.client.sin_port = htons(SERVER_PORT);
+    minLog.client.sin_addr.s_addr = htonl(SERVER_ADDR);
 
-        //TODO increase i every time that a log of a server branch is completely read by the manager..
-        //TODO .. increase i every time that log_time[branchIndex[i]] == (-1 || MAX_LOGS_PER BRANCHES)
+    printf("Sorting\n");
+
+    //TODO to solve stack smasching
+
+    for (int i = 0; i < loggerToWait; ) {
 
         j = 0;
         minIndex = 0;
 
-        for (struct branches_info_list *current = first_branch_info; current != NULL; current = current->next) {
+        for (struct branches_info_list *current = first_branch_info; current != NULL && branchCompleted[j] == 0; current = current->next) {
 
-            //main matter
             tempLog = ((current->info)->loggerLogs);
-            tempLogClock = (tempLog[branchIndex[j]]).log_time;
 
             //if there are no more logs for the current branch,
             //increase i, and continue
             if(tempLog[branchIndex[j]].log_type == -1){
                 ++i;
+                branchCompleted[j] = 1;
                 continue;
             }
+
+            tempLogClock = (tempLog[branchIndex[j]]).log_time;
 
             if (tempLogClock < min) {
                 min = tempLogClock;
@@ -125,25 +190,27 @@ int sortLoggersLogs()
         //increasing index of branch that has the minimum (in clock) log
         branchIndex[minIndex]++;
 
-        if(branchIndex[minIndex] == MAX_LOGS_PER_BRANCH)
+        if(branchIndex[minIndex] == MAX_LOGS_PER_BRANCH && branchCompleted[j] == 0) {
             ++i;
+            branchCompleted[j] = 1;
+        }
 
         //here the minimum has been selected, converted and appended
         strcat(sortedLogsString, logToString(minLog));
 
     }
 
+    printf("Finished sorting\n");
 
-
-
+    return 0;
 }
 
 
 
 void loggerManager()
 {
-    timeLenTemplate = strlen("[Insert time]->");
-    cliLenTemplate = strlen("[000.000.000.000:00000]");
+    timeLenTemplate = strlen("[Sat Aug 10 15:58:24 2019]->");
+    cliLenTemplate = strlen("[000.000.000.000:00000]->");
 
     do{
 

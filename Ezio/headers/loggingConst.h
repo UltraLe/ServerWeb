@@ -15,6 +15,8 @@
 
 #define CLIENT_DISCONNECTED 5
 
+#define NO_ACTIVITY 0
+
 #define WRITE_ON_DISK_TIMER_SEC 5                //time after which logs of each server branch will
                                                  //be copied on disk
 
@@ -30,11 +32,13 @@
 
 #define CLIENT_DISCONNECTED_S "Client disconnected from the server\n"
 
+#define NO_ACTIVITY_S "Zero client has arrived since last log update\n"
+
 
 #define LOG_FILENAME "serverLog.txt"
 
 struct log{
-    clock_t log_time;
+    time_t log_time;
     int log_type;
     struct sockaddr_in client;
 };

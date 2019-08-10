@@ -394,7 +394,8 @@ int main(int argc, char **argv) {
     }
 
     //creating logger manager
-    if(pthread_create(NULL, (void *)loggerManager, NULL)){
+    pthread_t lm;
+    if(pthread_create(&lm, NULL, (void *)loggerManager, NULL)){
         perror("Error in pthread_create (loggerManager)");
         exit(-1);
     }

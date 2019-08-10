@@ -25,6 +25,8 @@
 
 #include <semaphore.h>
 
+#include <pthread.h>
+
 #define NUM_INIT_SB 3           //number of the server branches that will be always
                                 //ready to serve clients
 
@@ -65,7 +67,7 @@
 #define CHECK_PERC_EACH 1       //check the increasing/decreasing client number (of a server breanch)
                                 //every abs(CHECK_PER_EACH) connection recived/closed
 
-#define SERVER_PORT 1033
+#define SERVER_PORT 1035
 
 #define SERVER_ADDR INADDR_ANY
 

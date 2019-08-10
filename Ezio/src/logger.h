@@ -6,7 +6,7 @@ int LOG(int log_type, struct sockaddr_in client)
 {
     struct log newLog;
     newLog.client  = client;
-    newLog.log_time = clock();
+    newLog.log_time = time(0);
     newLog.log_type = log_type;
 
     //acquiring sem_on_logs
@@ -63,7 +63,7 @@ void logger()
 
         //if there are less logs than MAX_LOGS_PER BRANCH, the logger manager will have to know it
         if(numLogs < MAX_LOGS_PER_BRANCH)
-            loggerLogs[numLogs+1].log_type = -1;
+            loggerLogs[numLogs].log_type = -1;
 
         //resetting numLogs
         numLogs = 0;
