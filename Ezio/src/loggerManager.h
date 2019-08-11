@@ -28,25 +28,24 @@ void releaseWaitingLoggers()
 
 
 
-char *logToString(struct log currentLog)
+int logToString(struct log currentLog)
 {
     char stringMessage[MAX_LOG_LEN];
     char stringClient[cliLenTemplate];
     char stringTime[timeLenTemplate];
 
-    char *stringLog = malloc(sizeof(char)*(MAX_LOG_LEN+cliLenTemplate+timeLenTemplate));
-    memset(stringLog, 0, sizeof(*stringLog));
+    printf("Called logToSting\n");
+
+    char stringLog[MAX_LOG_LEN+cliLenTemplate+timeLenTemplate];
 
     //log time in string
     struct tm *localTime;
     localTime = localtime(&(currentLog.log_time));
-    sprintf(stringTime, "[%s]->", asctime(localTime));
+    sprintf(stringTime, "[%s", asctime(localTime));
+    strcpy((stringTime + timeLenTemplate - 3), "]->");
 
     //client info in string
-    strcpy(stringClient, "[");
-    strcpy(stringClient, inet_ntoa(currentLog.client.sin_addr));
-    strcpy(stringClient, ":");
-    sprintf(stringClient, "%d]->", ntohs(currentLog.client.sin_port));
+    sprintf(stringClient, "[%s:%d]->", inet_ntoa(currentLog.client.sin_addr), ntohs(currentLog.client.sin_port));
 
     //client action in string
     switch(currentLog.log_type){
@@ -70,12 +69,18 @@ char *logToString(struct log currentLog)
             break;
         default:
             printf("Something went wrong in logToString\n");
-            return NULL;
+            return -1;
     }
 
-    sprintf(stringLog, "%s%s%s", stringTime, stringClient, stringLog);
+    //creating log string
+    sprintf(stringLog, "%s%s%s", stringTime, stringClient, stringMessage);
 
-    return stringLog;
+    printf("stringLog: %s\n", stringLog);
+
+    //linking to the sorted ones
+    strcat(sortedLogsString, stringLog);
+
+    return 0;
 }
 
 
@@ -164,13 +169,19 @@ int sortLoggersLogs()
         j = 0;
         minIndex = 0;
 
-        for (struct branches_info_list *current = first_branch_info; current != NULL && branchCompleted[j] == 0; current = current->next) {
+        printf("After first for\n");
+
+        for (struct branches_info_list *current = first_branch_info; current != NULL && branchCompleted[j] == 0; current = current->next, ++j) {
+
+            printf("Branch %d\n", (current->info)->branch_pid);
+
+            printf("Index: %d\n", branchIndex[j]);
 
             tempLog = ((current->info)->loggerLogs);
 
             //if there are no more logs for the current branch,
             //increase i, and continue
-            if(tempLog[branchIndex[j]].log_type == -1){
+            if( ((tempLog[branchIndex[j]]).log_type) == -1){
                 ++i;
                 branchCompleted[j] = 1;
                 continue;
@@ -184,7 +195,6 @@ int sortLoggersLogs()
                 minLog = *tempLog;
             }
 
-            ++j;
         }
 
         //increasing index of branch that has the minimum (in clock) log
@@ -196,9 +206,13 @@ int sortLoggersLogs()
         }
 
         //here the minimum has been selected, converted and appended
-        strcat(sortedLogsString, logToString(minLog));
+        logToString(minLog);
+
+        printf("After calling logToString\n");
 
     }
+
+    printf("All: %s\n", sortedLogsString);
 
     printf("Finished sorting\n");
 

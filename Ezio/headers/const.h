@@ -64,10 +64,10 @@
 
 #define MAX_BRANCHES 1000       //used to initialize the memory described up above -> (65536-1026)/MAX_CLI_PER_SB
 
-#define CHECK_PERC_EACH 1       //check the increasing/decreasing client number (of a server breanch)
-                                //every abs(CHECK_PER_EACH) connection recived/closed
+#define CHECK_PERC_EACH 100       //check the increasing/decreasing client number (of a server breanch)
+                                  //every abs(CHECK_PER_EACH) connection recived/closed
 
-#define SERVER_PORT 1035
+#define SERVER_PORT 1034
 
 #define SERVER_ADDR INADDR_ANY
 

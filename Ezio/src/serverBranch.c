@@ -411,7 +411,7 @@ int main(int argc, char **argv)
         exit(-1);
     }
 
-    pid_t loggerPid;
+    pthread_t loggerPid;
 
     //creating logger
     if(pthread_create(&loggerPid, NULL, (void *)logger, NULL)){

@@ -63,7 +63,9 @@ void logger()
 
         //if there are less logs than MAX_LOGS_PER BRANCH, the logger manager will have to know it
         if(numLogs < MAX_LOGS_PER_BRANCH)
-            loggerLogs[numLogs].log_type = -1;
+            (loggerLogs[numLogs]).log_type = -1;
+
+        printf("Branch %d, numLogs: %d\n", getpid(), numLogs);
 
         //resetting numLogs
         numLogs = 0;
