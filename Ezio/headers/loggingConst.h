@@ -20,7 +20,7 @@
 #define WRITE_ON_DISK_TIMER_SEC 5                //time after which logs of each server branch will
                                                  //be copied on disk
 
-#define MAX_LOG_LEN 36
+#define MAX_LOG_LEN 50
 
 #define CLIENT_ACCEPTED_S "Connection established\n"
 

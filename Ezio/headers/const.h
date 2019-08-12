@@ -67,7 +67,7 @@
 #define CHECK_PERC_EACH 100       //check the increasing/decreasing client number (of a server breanch)
                                   //every abs(CHECK_PER_EACH) connection recived/closed
 
-#define SERVER_PORT 1034
+#define SERVER_PORT 1033
 
 #define SERVER_ADDR INADDR_ANY
 

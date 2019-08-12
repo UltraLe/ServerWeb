@@ -27,7 +27,7 @@ void releaseWaitingLoggers()
 }
 
 
-
+//TODO stack smashing when called this func
 int logToString(struct log currentLog)
 {
     char stringMessage[MAX_LOG_LEN];
@@ -35,6 +35,7 @@ int logToString(struct log currentLog)
     char stringTime[timeLenTemplate];
 
     printf("Called logToSting\n");
+
 
     char stringLog[MAX_LOG_LEN+cliLenTemplate+timeLenTemplate];
 
@@ -47,27 +48,37 @@ int logToString(struct log currentLog)
     //client info in string
     sprintf(stringClient, "[%s:%d]->", inet_ntoa(currentLog.client.sin_addr), ntohs(currentLog.client.sin_port));
 
-    //client action in string
+    //client action in string0
+    printf("0\n");
+
     switch(currentLog.log_type){
+
         case CLIENT_ACCEPTED:
             strcpy(stringMessage, CLIENT_ACCEPTED_S);
+            printf("1\n");
             break;
         case CLIENT_DISCONNECTED:
             strcpy(stringMessage, CLIENT_DISCONNECTED_S);
+            printf("2\n");
             break;
         case CLIENT_ERROR_READ:
             strcpy(stringMessage, CLIENT_ERROR_READ_S);
+            printf("3\n");
             break;
         case CLIENT_REMOVED:
             strcpy(stringMessage, CLIENT_REMOVED_S);
+            printf("4\n");
             break;
         case CLIENT_SERVED:
             strcpy(stringMessage, CLIENT_SERVED_S);
+            printf("5\n");
             break;
         case NO_ACTIVITY:
             strcpy(stringMessage, NO_ACTIVITY_S);
+            printf("6\n");
             break;
         default:
+            printf("6\n");
             printf("Something went wrong in logToString\n");
             return -1;
     }
@@ -77,8 +88,13 @@ int logToString(struct log currentLog)
 
     printf("stringLog: %s\n", stringLog);
 
+
+
     //linking to the sorted ones
     strcat(sortedLogsString, stringLog);
+
+
+    printf("After strcat\n");
 
     return 0;
 }
@@ -90,7 +106,7 @@ int writeLogsOnDisk()
     int fd;
     off_t currentOffset;
 
-    if((fd = open(LOG_FILENAME, O_RDWR)) == -1){
+    if((fd = open(LOG_FILENAME, O_RDWR|O_APPEND|O_CREAT)) == -1){
         perror("Error in open (loggerManager)");
         return -1;
     }
@@ -109,6 +125,8 @@ int writeLogsOnDisk()
     }
 
     close(fd);
+
+    return 0;
 
 }
 
@@ -162,8 +180,6 @@ int sortLoggersLogs()
 
     printf("Sorting\n");
 
-    //TODO to solve stack smasching
-
     for (int i = 0; i < loggerToWait; ) {
 
         j = 0;
@@ -206,10 +222,14 @@ int sortLoggersLogs()
         }
 
         //here the minimum has been selected, converted and appended
-        logToString(minLog);
+        printf("Before calling logToString\n");
+
+        if(logToString(minLog) == -1){
+            perror("Error in logToString\n");
+            return -1;
+        }
 
         printf("After calling logToString\n");
-
     }
 
     printf("All: %s\n", sortedLogsString);
