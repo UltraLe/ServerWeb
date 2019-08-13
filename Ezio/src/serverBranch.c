@@ -425,7 +425,7 @@ int main(int argc, char **argv)
     int connect_fd, tryWaitRet;
 
     struct sockaddr_in acceptedClientAddress;
-    socklen_t lenCliAddr = sizeof(acceptedClientAddress);
+    int lenCliAddr = sizeof(acceptedClientAddress);
 
     //initializing client list
     firstConnectedClient = NULL;

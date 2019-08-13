@@ -72,10 +72,6 @@ int logToString(struct log currentLog)
             strcpy(stringMessage, CLIENT_SERVED_S);
             printf("5\n");
             break;
-        case NO_ACTIVITY:
-            strcpy(stringMessage, NO_ACTIVITY_S);
-            printf("6\n");
-            break;
         default:
             printf("6\n");
             printf("Something went wrong in logToString\n");
@@ -177,13 +173,6 @@ int sortLoggersLogs()
     struct log *tempLog;
     struct log minLog;
     int minSelected;
-
-    //if any branch has not registered any log,
-    //min log has to specify it
-    minLog.log_type = NO_ACTIVITY;
-    minLog.log_time = time(0);
-    minLog.client.sin_port = htons(SERVER_PORT);
-    minLog.client.sin_addr.s_addr = htonl(SERVER_ADDR);
 
     printf("Sorting %d logger info\n", loggerToWait);
 
