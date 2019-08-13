@@ -77,6 +77,7 @@ int insert_new_client(int connect_fd, struct sockaddr_in clientAddress)
     memset(&(new_entry->client), 0, sizeof(struct client_info));
 
     (new_entry->client).fd = connect_fd;
+    memset(&(new_entry->client).client_addr, 0, sizeof(struct sockaddr_in));
     (new_entry->client).client_addr = clientAddress;
     (new_entry->client).last_time_active = time(0);
 
@@ -424,7 +425,7 @@ int main(int argc, char **argv)
     int connect_fd, tryWaitRet;
 
     struct sockaddr_in acceptedClientAddress;
-    socklen_t lenCliAddr;
+    socklen_t lenCliAddr = sizeof(acceptedClientAddress);
 
     //initializing client list
     firstConnectedClient = NULL;

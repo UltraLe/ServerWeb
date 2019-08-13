@@ -89,7 +89,7 @@ int logToString(struct log currentLog)
     strcpy((stringTime + timeLenTemplate - 3), "]->");
 
     //client info in string
-    sprintf(stringClient, "[%s:%d]->", inet_ntoa(currentLog.client.sin_addr), ntohs(currentLog.client.sin_port));
+    sprintf(stringClient, "[%s:%i]->", inet_ntoa(currentLog.client.sin_addr), ntohs(currentLog.client.sin_port));
 
     //creating log string
     sprintf(stringLog, "%s%s%s", stringTime, stringClient, stringMessage);
@@ -167,7 +167,8 @@ int sortLoggersLogs()
 
     //allocating space for the sorted stringLogs
     sortedLogsString = (char *)malloc(sizeof(char)*loggerToWait*MAX_LOGS_PER_BRANCH*(MAX_LOG_LEN+cliLenTemplate+timeLenTemplate));
-    time_t min = time(0) + 1;
+    time_t constMin = time(NULL) + 1;
+    time_t min = constMin;
     time_t tempLogClock;
 
     int j;
@@ -175,6 +176,7 @@ int sortLoggersLogs()
 
     struct log *tempLog;
     struct log minLog;
+    int minSelected;
 
     //if any branch has not registered any log,
     //min log has to specify it
@@ -183,58 +185,73 @@ int sortLoggersLogs()
     minLog.client.sin_port = htons(SERVER_PORT);
     minLog.client.sin_addr.s_addr = htonl(SERVER_ADDR);
 
-    printf("Sorting\n");
+    printf("Sorting %d logger info\n", loggerToWait);
 
     for (int i = 0; i < loggerToWait; ) {
 
         j = 0;
         minIndex = 0;
+        minSelected = 0;
 
         printf("After first for\n");
 
-        for (struct branches_info_list *current = first_branch_info; current != NULL && branchCompleted[j] == 0; current = current->next, ++j) {
+        for (struct branches_info_list *current = first_branch_info; current != NULL; current = current->next, ++j) {
+
+            //if a branch has been completed, then jump to the next one
+            if(branchCompleted[j] == 1)
+                continue;
 
             printf("Branch %d\n", (current->info)->branch_pid);
 
             printf("Index: %d\n", branchIndex[j]);
 
-            tempLog = ((current->info)->loggerLogs);
+            tempLog = (((current->info)->loggerLogs) + branchIndex[j]);
 
             //if there are no more logs for the current branch,
             //increase i, and continue
-            if( ((tempLog[branchIndex[j]]).log_type) == -1){
+            if((tempLog->log_type) == -1){
                 ++i;
+                printf("This branch has finisched\n");
                 branchCompleted[j] = 1;
                 continue;
             }
 
-            tempLogClock = (tempLog[branchIndex[j]]).log_time;
+            tempLogClock = tempLog->log_time;
+            printf("tempClock: %ld, minClock: %ld\n", tempLogClock, min);
 
             if (tempLogClock < min) {
+                minSelected = 1;
                 min = tempLogClock;
                 minIndex = j;
                 minLog = *tempLog;
+                printf("A new min time has been registered, with clock: %ld\n", tempLog->log_time);
             }
 
         }
 
-        //increasing index of branch that has the minimum (in clock) log
-        branchIndex[minIndex]++;
+        if(minSelected) {
 
-        if(branchIndex[minIndex] == MAX_LOGS_PER_BRANCH && branchCompleted[j] == 0) {
-            ++i;
-            branchCompleted[j] = 1;
+            if (branchIndex[minIndex] == MAX_LOGS_PER_BRANCH && branchCompleted[j] == 0) {
+                ++i;
+                branchCompleted[j] = 1;
+            }
+
+            //increasing index of branch that has the minimum (in clock) log
+            branchIndex[minIndex]++;
+
+            //here the minimum has been selected, converted and appended
+            printf("Before calling logToString\n");
+
+            if (logToString(minLog) == -1) {
+                perror("Error in logToString\n");
+                return -1;
+            }
+
+            //resetting min
+            min = constMin;
+
+            printf("After calling logToString\n");
         }
-
-        //here the minimum has been selected, converted and appended
-        printf("Before calling logToString\n");
-
-        if(logToString(minLog) == -1){
-            perror("Error in logToString\n");
-            return -1;
-        }
-
-        printf("After calling logToString\n");
     }
 
     printf("All: %s\n", sortedLogsString);

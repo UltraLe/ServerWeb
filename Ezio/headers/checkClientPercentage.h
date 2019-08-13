@@ -55,9 +55,6 @@ void checkClientPercentage()
         return;
     }
 
-    //TODO uncomment before deploy (run with sudo)
-
-    /*
     int priority = 0;
 
     //every time that OLD PERF is different than NEW PERC,
@@ -90,11 +87,13 @@ void checkClientPercentage()
                 break;
         }
 
+        //TODO uncomment before deploy (run with sudo)
+        /*
         if(setpriority(PRIO_PROCESS, getpid(), priority) == -1){
             perror("Error in setpriority");
         }
+         */
     }
-     */
 
     //printf("Percentage checked, old_perc: %f, new_perc: %f\n", old_perc, new_perc);
 
