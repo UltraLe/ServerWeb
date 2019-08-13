@@ -6,8 +6,8 @@
 #include <time.h>
 
 int loggerToWait = 0;
-//struct log *sortedLogs;
 char *sortedLogsString;
+int sortedLogsStringSize;
 
 int timeLenTemplate;
 int cliLenTemplate;
@@ -16,6 +16,8 @@ int cliLenTemplate;
 
 void releaseWaitingLoggers()
 {
+    printf("Releasing loggers\n");
+
     for(int i = 0; i < loggerToWait; ++i){
 
         if(sem_post(&(info->sem_loggerManagerHasFinished)) == -1){
@@ -34,19 +36,16 @@ int logToString(struct log currentLog)
     char stringClient[cliLenTemplate];
     char stringTime[timeLenTemplate];
 
+    memset(stringMessage, 0, MAX_LOG_LEN);
+    memset(stringClient, 0, cliLenTemplate);
+    memset(stringTime, 0, timeLenTemplate);
+
+
     printf("Called logToSting\n");
 
 
     char stringLog[MAX_LOG_LEN+cliLenTemplate+timeLenTemplate];
-
-    //log time in string
-    struct tm *localTime;
-    localTime = localtime(&(currentLog.log_time));
-    sprintf(stringTime, "[%s", asctime(localTime));
-    strcpy((stringTime + timeLenTemplate - 3), "]->");
-
-    //client info in string
-    sprintf(stringClient, "[%s:%d]->", inet_ntoa(currentLog.client.sin_addr), ntohs(currentLog.client.sin_port));
+    memset(stringLog, 0, MAX_LOG_LEN+cliLenTemplate+timeLenTemplate);
 
     //client action in string0
     printf("0\n");
@@ -83,16 +82,22 @@ int logToString(struct log currentLog)
             return -1;
     }
 
+    //log time in string
+    struct tm *localTime = localtime(&(currentLog.log_time));
+    sprintf(stringTime, "[%s", asctime(localTime));
+
+    strcpy((stringTime + timeLenTemplate - 3), "]->");
+
+    //client info in string
+    sprintf(stringClient, "[%s:%d]->", inet_ntoa(currentLog.client.sin_addr), ntohs(currentLog.client.sin_port));
+
     //creating log string
     sprintf(stringLog, "%s%s%s", stringTime, stringClient, stringMessage);
 
     printf("stringLog: %s\n", stringLog);
 
-
-
     //linking to the sorted ones
     strcat(sortedLogsString, stringLog);
-
 
     printf("After strcat\n");
 
@@ -243,10 +248,14 @@ int sortLoggersLogs()
 
 void loggerManager()
 {
+    //initializing data used by the loggerManager
     timeLenTemplate = strlen("[Sat Aug 10 15:58:24 2019]->");
     cliLenTemplate = strlen("[000.000.000.000:00000]->");
+    sortedLogsStringSize = loggerToWait*MAX_LOGS_PER_BRANCH*(MAX_LOG_LEN+cliLenTemplate+timeLenTemplate);
 
     do{
+
+        printf("Logger manager Waiting for logger to finisch\n");
 
         if(sem_wait(&semOnBranchesNum) == -1){
             perror("Error on sem_wait (semOnBranchesNum)");
@@ -259,6 +268,8 @@ void loggerManager()
             perror("Error on sem_post (semOnBranchesNum)");
             exit(-1);
         }
+
+        printf("Working on %d loggers\n", loggerToWait);
 
         //logger manager sleeps until 'actual_branches_num' logger are ready
         //to send the log of their clients
@@ -285,10 +296,12 @@ void loggerManager()
         }
 
         //releasing sortedLogsString
-        free(sortedLogsString);
+        memset(sortedLogsString, 0, sortedLogsStringSize);
 
         //releasing loggers
         releaseWaitingLoggers();
+
+        printf("Loggers released\n");
 
     }while(1);
 

@@ -34,7 +34,6 @@
 
 #define NO_ACTIVITY_S "Zero client has arrived since last log update\n"
 
-
 #define LOG_FILENAME "serverLog.txt"
 
 struct log{

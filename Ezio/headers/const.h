@@ -75,7 +75,6 @@
 
 #include "loggingConst.h"
 
-
 char *socket_path = "\0hidden"; //strings that identifies the AF_UNIX socket
 
 struct handler_info{

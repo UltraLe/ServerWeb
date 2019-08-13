@@ -235,7 +235,7 @@ int main(int argc, char **argv) {
 
     int listen_fd;
     struct sockaddr_in address;
-    int socket_opt = 1;
+    int socket_option = 1;
 
     //initializing cache address
     if (shmget(IPC_CACHE_KEY, CACHE_BYTES, IPC_CREAT|0666) == -1) {
@@ -331,7 +331,7 @@ int main(int argc, char **argv) {
         exit(-1);
     }
 
-    if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &socket_opt, sizeof(socket_opt)) == -1) {
+    if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &socket_option, sizeof(socket_option)) == -1) {
         perror("Error in setsockopt: ");
         exit(-1);
     }

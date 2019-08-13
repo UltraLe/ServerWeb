@@ -39,7 +39,7 @@ int numSetsReady = 0, max_fd;
 #include "checkClientPercentage.h"
 
 //local logs used by each server branch
-struct log branshLogs[MAX_LOGS_PER_BRANCH];
+struct log branchLogs[MAX_LOGS_PER_BRANCH];
 int numLogs = 0;
 sem_t sem_on_logs;
 struct log *loggerLogs;
