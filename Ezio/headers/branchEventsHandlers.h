@@ -75,6 +75,9 @@ void recive_clients()
             printf("Error in insert_new_client (recive_clients)\n");
         }
 
+        if(LOG(CLIENT_MERGED, clientAddress) == -1)
+            printf("Error in LOG (client served)");
+
     }while(1);
 
     //giving the OK to the handler

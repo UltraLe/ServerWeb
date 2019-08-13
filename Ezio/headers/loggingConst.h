@@ -15,6 +15,8 @@
 
 #define CLIENT_DISCONNECTED 5
 
+#define CLIENT_MERGED 6
+
 #define WRITE_ON_DISK_TIMER_SEC 5                //time after which logs of each server branch will
                                                  //be copied on disk
 
@@ -29,6 +31,8 @@
 #define CLIENT_SERVED_S "Client has been served\n"
 
 #define CLIENT_DISCONNECTED_S "Client disconnected from the server\n"
+
+#define CLIENT_MERGED_S "Client has been transfered to another server branch\n"
 
 #define LOG_FILENAME "serverLog.txt"
 
