@@ -48,7 +48,7 @@ int logToString(struct log currentLog)
     memset(stringLog, 0, MAX_LOG_LEN+cliLenTemplate+timeLenTemplate);
 
     //client action in string0
-    printf("0\n");
+    printf("0, log_type: %d\n", currentLog.log_type);
 
     switch(currentLog.log_type){
 
@@ -188,7 +188,9 @@ int sortLoggersLogs()
 
         printf("After first for\n");
 
-        for (struct branches_info_list *current = first_branch_info; current != NULL; current = current->next, ++j) {
+        //TODO if a new branch has been created but is not included into the sorting operation
+        //TODO it has to be ignored
+        for (struct branches_info_list *current = first_branch_info; j < loggerToWait; current = current->next, ++j) {
 
             //if a branch has been completed, then jump to the next one
             if(branchCompleted[j] == 1)

@@ -447,7 +447,7 @@ int main(int argc, char **argv)
 
     max_fd = handler_info->listen_fd;
 
-    //printf("\tServer branch with pid %d ready\n", getpid());
+    printf("\tServer branch with pid %d ready\n", getpid());
     //ready to serve clients
     while(1){
 
@@ -554,6 +554,7 @@ int main(int argc, char **argv)
 
                 //if the server branch is here another error occurred
                 if(connect_fd == -1 && errno != EINTR){
+                    printf("Branch %d FD: %d\n",getpid(), handler_info->listen_fd);
                     perror("Error in accept");
                     exit(-1);
                 }
@@ -578,7 +579,7 @@ int main(int argc, char **argv)
                     serverIsFull = 1;
                 }
 
-                //printf("\tServer branch with pid %d has inserted clients\n", getpid());
+                printf("\tServer branch with pid %d has inserted clients\n", getpid());
 
                 break;
             }
