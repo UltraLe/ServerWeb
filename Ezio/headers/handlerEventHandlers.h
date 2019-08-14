@@ -27,7 +27,7 @@ void clients_has_changed()
     //before create or merge branches, the logger manager has to finish its job
     //or the number of branches (and loggers) may increment or decrement while
     //the loggerManager is working on them, and nothing will work anymore
-    printf("Recived SIGUSR1 in handler, client has changed\n");
+    //printf("Recived SIGUSR1 in handler, client has changed\n");
 
     //blocking SIGUSR1 in order to complete the function and not being interrupted
     struct sigaction act;
@@ -106,7 +106,7 @@ void clients_has_changed()
 
         //before checking if merge operation is needed, the loggerManager
         //has to finish the sorting operation of the logs
-        printf("Waiting on semLoggerManaher_Handler for merge, handler\n");
+        //printf("Waiting on semLoggerManaher_Handler for merge, handler\n");
         if(sem_wait(&semLoggerManaher_Handler) == -1){
             perror("Error in sem_wait (semLoggerManaher_Handler) handler");
             return;
@@ -121,7 +121,7 @@ void clients_has_changed()
         }
         //printf("Merge ended, actual_branches_num: %d\n", actual_branches_num);
 
-        printf("Posting on semLoggerManaher_Handler, handler\n");
+        //printf("Posting on semLoggerManaher_Handler, handler\n");
         if(sem_post(&semLoggerManaher_Handler) == -1){
             perror("Error in sem_post (semLoggerManaher_Handler) handler");
             return;
@@ -138,14 +138,14 @@ void clients_has_changed()
         exit(-1);
     }
 
-    //checkig if any SIGUSR1 has arrived during the execution of this handler
+    //checking if any SIGUSR1 has arrived during the execution of this handler
     if(sigismember(&set, SIGUSR1)){
         sigemptyset(&set);
         sigaddset(&set,SIGUSR1);
-        printf("another SIGUSR has arrived while executing its handler\n");
+        //printf("another SIGUSR has arrived while executing its handler\n");
         sigprocmask(SIG_UNBLOCK,&set,NULL);
     }
 
-    printf("clients_has_changed ended \n");
+    //printf("clients_has_changed ended \n");
     //branchesStatus();
 }

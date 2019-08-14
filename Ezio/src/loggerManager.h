@@ -268,7 +268,7 @@ void loggerManager()
 
         //a branch must not be removed (with merge operation) during sorting operation
         //sem_wait
-        printf("Waiting on semLoggerManaher_Handler, logger\n");
+        //printf("Waiting on semLoggerManaher_Handler, logger\n");
         if(sem_wait(&semLoggerManaher_Handler) == -1){
             perror("Error in sem_wait (semLoggerManaher_Handler)");
         }
@@ -306,7 +306,7 @@ void loggerManager()
 
         //a branch must not be removed (with merge operation) during sorting operation
         //sem_post
-        printf("Posting on semLoggerManaher_Handler, logger\n");
+        //printf("Posting on semLoggerManaher_Handler, logger\n");
         if(sem_post(&semLoggerManaher_Handler) == -1){
             perror("Error in sem_post (semLoggerManaher_Handler)");
         }
