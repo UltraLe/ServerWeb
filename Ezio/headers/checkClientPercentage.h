@@ -9,9 +9,6 @@ void checkClientPercentage()
 {
 
     //printf("Called percentage checker\n");
-
-    //TODO edit nicenes according to active connections
-
     float old_perc, new_perc;
 
     //calculating 'OLD' percentage of connected clients
@@ -61,7 +58,7 @@ void checkClientPercentage()
     //send a signal to the server branches handler
     if(old_perc != new_perc){
 
-        printf("Sending SIGUSR1 to handler\n");
+        //printf("Sending SIGUSR1 to handler\n");
 
         if(kill(handler_info->pid, SIGUSR1) == -1){
             perror("Error in sending SIGUSR1 to handler: ");

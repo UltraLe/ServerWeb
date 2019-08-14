@@ -10,7 +10,7 @@
 //function that recive the client connection from a server branch
 void recive_clients()
 {
-    printf("Server branch %d reciving clients (pre wait)\n", getpid());
+    //printf("Server branch %d reciving clients (pre wait)\n", getpid());
 
     //waiting for the sender to create and listen on the unix socket
     if(sem_wait(&(handler_info->sem_sendRecive)) == -1){
@@ -22,7 +22,7 @@ void recive_clients()
     struct sockaddr_un addr;
     int unixSock_fd;
 
-    printf("Server branch %d reciving clients (post wait)\n", getpid());
+    //printf("Server branch %d reciving clients (post wait)\n", getpid());
 
     if((unixSock_fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1){
         perror("Unable to create unix socket: ");

@@ -29,6 +29,22 @@ void clients_has_changed()
     //the loggerManager is working on them, and nothing will work anymore
     printf("Recived SIGUSR1 in handler, client has changed\n");
 
+    //blocking SIGUSR1 in order to complete the function and not being interrupted
+    struct sigaction act;
+    memset(&act, 0, sizeof(act));
+    act.sa_handler = SIG_IGN;
+    act.sa_flags = 0;
+
+    if(sigaction(SIGUSR1, &act, NULL) == -1){
+        perror("Error in sigaction (SIGUSR1, SIG_IGN): ");
+        exit(-1);
+    }
+
+    //after the execution of the handler we have to check if other SIGUSR1 has arrived
+    sigset_t set;
+    sigaddset(&set,SIGUSR1);
+    sigprocmask(SIG_BLOCK,&set,NULL);
+
     int min = MAX_CLI_PER_SB+1;
     int veryMin = min;
     pid_t minPid = -1, veryMinPid = -1;
@@ -92,7 +108,7 @@ void clients_has_changed()
         //has to finish the sorting operation of the logs
         printf("Waiting on semLoggerManaher_Handler for merge, handler\n");
         if(sem_wait(&semLoggerManaher_Handler) == -1){
-            perror("Error in sem_wait (semLoggerManaher_Handler)");
+            perror("Error in sem_wait (semLoggerManaher_Handler) handler");
             return;
         }
 
@@ -107,11 +123,29 @@ void clients_has_changed()
 
         printf("Posting on semLoggerManaher_Handler, handler\n");
         if(sem_post(&semLoggerManaher_Handler) == -1){
-            perror("Error in sem_post (semLoggerManaher_Handler)");
+            perror("Error in sem_post (semLoggerManaher_Handler) handler");
             return;
         }
 
     }
 
+
+    //restoring event hadnler
+    act.sa_handler = clients_has_changed;
+
+    if(sigaction(SIGUSR1, &act, NULL) == -1){
+        perror("Error in sigaction (SIGUSR1, restoring): ");
+        exit(-1);
+    }
+
+    //checkig if any SIGUSR1 has arrived during the execution of this handler
+    if(sigismember(&set, SIGUSR1)){
+        sigemptyset(&set);
+        sigaddset(&set,SIGUSR1);
+        printf("another SIGUSR has arrived while executing its handler\n");
+        sigprocmask(SIG_UNBLOCK,&set,NULL);
+    }
+
+    printf("clients_has_changed ended \n");
     //branchesStatus();
 }

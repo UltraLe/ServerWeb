@@ -42,7 +42,7 @@ int LOG(int log_type, struct sockaddr_in client)
         return -1;
     }
 
-    printf("Logger with pid %d has created a log (%d)\n", getpid(), log_type);
+    //printf("Logger with pid %d has created a log (%d)\n", getpid(), log_type);
 
     return 0;
 }
@@ -51,7 +51,7 @@ void logger()
 {
 
     while(1){
-        printf("Logger with pid %d is sleeping\n", getpid());
+        //printf("Logger with pid %d is sleeping\n", getpid());
 
         sleep(WRITE_ON_DISK_TIMER_SEC);
 
@@ -69,7 +69,7 @@ void logger()
         if(numLogs < MAX_LOGS_PER_BRANCH)
             (loggerLogs[numLogs]).log_type = -1;
 
-        printf("Branch %d, numLogs (total registered): %d\n", getpid(), numLogs);
+        //printf("Branch %d, numLogs (total registered): %d\n", getpid(), numLogs);
 
         //resetting numLogs and branchLogs
         numLogs = 0;
@@ -90,11 +90,11 @@ void logger()
         //the logger manager could be still sleeping because
         //1. is working on previous logs
         //2. not all the server branches are ready
-        printf("Logger with pid %d is waiting for the manager\n", getpid());
+        //printf("Logger with pid %d is waiting for the manager\n", getpid());
         if(sem_wait(&(handler_info->sem_loggerManagerHasFinished)) == -1){
             perror("Error on sem_wait (loggermanagerHasFinisched)");
             return;
         }
-        printf("Logger with pid %d has finisched\n", getpid());
+        //printf("Logger with pid %d has finished\n", getpid());
     }
 }

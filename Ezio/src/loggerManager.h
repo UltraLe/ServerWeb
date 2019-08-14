@@ -16,7 +16,7 @@ int cliLenTemplate;
 
 void releaseWaitingLoggers()
 {
-    printf("Releasing loggers\n");
+    //printf("Releasing loggers\n");
 
     for(int i = 0; i < loggerToWait; ++i){
 
@@ -29,7 +29,7 @@ void releaseWaitingLoggers()
 }
 
 
-//TODO stack smashing when called this func
+
 int logToString(struct log currentLog)
 {
     char stringMessage[MAX_LOG_LEN];
@@ -41,43 +41,42 @@ int logToString(struct log currentLog)
     memset(stringTime, 0, timeLenTemplate);
 
 
-    printf("Called logToSting\n");
+    //printf("Called logToSting\n");
 
 
     char stringLog[MAX_LOG_LEN+cliLenTemplate+timeLenTemplate];
     memset(stringLog, 0, MAX_LOG_LEN+cliLenTemplate+timeLenTemplate);
 
     //client action in string0
-    printf("0, log_type: %d\n", currentLog.log_type);
+    //printf("0, log_type: %d\n", currentLog.log_type);
 
     switch(currentLog.log_type){
 
         case CLIENT_ACCEPTED:
             strcpy(stringMessage, CLIENT_ACCEPTED_S);
-            printf("1\n");
+            //printf("1\n");
             break;
         case CLIENT_DISCONNECTED:
             strcpy(stringMessage, CLIENT_DISCONNECTED_S);
-            printf("2\n");
+            //printf("2\n");
             break;
         case CLIENT_ERROR_READ:
             strcpy(stringMessage, CLIENT_ERROR_READ_S);
-            printf("3\n");
+            //printf("3\n");
             break;
         case CLIENT_REMOVED:
             strcpy(stringMessage, CLIENT_REMOVED_S);
-            printf("4\n");
+            //printf("4\n");
             break;
         case CLIENT_SERVED:
             strcpy(stringMessage, CLIENT_SERVED_S);
-            printf("5\n");
+            //printf("5\n");
             break;
         case CLIENT_MERGED:
             strcpy(stringMessage, CLIENT_MERGED_S);
-            printf("6\n");
+            //printf("6\n");
             break;
         default:
-            printf("7\n");
             printf("Something went wrong in logToString\n");
             return -1;
     }
@@ -94,12 +93,12 @@ int logToString(struct log currentLog)
     //creating log string
     sprintf(stringLog, "%s%s%s", stringTime, stringClient, stringMessage);
 
-    printf("stringLog: %s\n", stringLog);
+    //printf("stringLog: %s\n", stringLog);
 
     //linking to the sorted ones
     strcat(sortedLogsString, stringLog);
 
-    printf("After strcat\n");
+    //printf("After strcat\n");
 
     return 0;
 }
@@ -178,7 +177,7 @@ int sortLoggersLogs()
     struct log minLog;
     int minSelected;
 
-    printf("Sorting %d logger info\n", loggerToWait);
+    //printf("Sorting %d logger info\n", loggerToWait);
 
     for (int i = 0; i < loggerToWait; ) {
 
@@ -186,7 +185,7 @@ int sortLoggersLogs()
         minIndex = 0;
         minSelected = 0;
 
-        printf("After first for\n");
+        //printf("After first for\n");
 
         for (struct branches_info_list *current = first_branch_info; j < loggerToWait; current = current->next, ++j) {
 
@@ -194,9 +193,9 @@ int sortLoggersLogs()
             if(branchCompleted[j] == 1)
                 continue;
 
-            printf("Branch %d\n", (current->info)->branch_pid);
+            //printf("Branch %d\n", (current->info)->branch_pid);
 
-            printf("Index: %d\n", branchIndex[j]);
+            //printf("Index: %d\n", branchIndex[j]);
 
             tempLog = (((current->info)->loggerLogs) + branchIndex[j]);
 
@@ -204,20 +203,20 @@ int sortLoggersLogs()
             //increase i, and continue
             if((tempLog->log_type) == -1){
                 ++i;
-                printf("This branch has finished\n");
+                //printf("This branch has finished\n");
                 branchCompleted[j] = 1;
                 continue;
             }
 
             tempLogClock = tempLog->log_time;
-            printf("tempClock: %ld, minClock: %ld\n", tempLogClock, min);
+            //printf("tempClock: %ld, minClock: %ld\n", tempLogClock, min);
 
             if (tempLogClock < min) {
                 minSelected = 1;
                 min = tempLogClock;
                 minIndex = j;
                 minLog = *tempLog;
-                printf("A new min time has been registered, with clock: %ld\n", tempLog->log_time);
+                //printf("A new min time has been registered, with clock: %ld\n", tempLog->log_time);
             }
 
         }
@@ -233,7 +232,7 @@ int sortLoggersLogs()
             branchIndex[minIndex]++;
 
             //here the minimum has been selected, converted and appended
-            printf("Before calling logToString\n");
+            //printf("Before calling logToString\n");
 
             if (logToString(minLog) == -1) {
                 perror("Error in logToString\n");
@@ -243,13 +242,13 @@ int sortLoggersLogs()
             //resetting min
             min = constMin;
 
-            printf("After calling logToString\n");
+            //printf("After calling logToString\n");
         }
     }
 
-    printf("All: %s\n", sortedLogsString);
+    //printf("All: %s\n", sortedLogsString);
 
-    printf("Finished sorting\n");
+    //printf("Finished sorting\n");
 
     return 0;
 }
@@ -265,7 +264,7 @@ void loggerManager()
 
     do{
 
-        printf("Logger manager Waiting for logger to finish\n");
+        //printf("Logger manager Waiting for logger to finish\n");
 
         //a branch must not be removed (with merge operation) during sorting operation
         //sem_wait
@@ -286,7 +285,7 @@ void loggerManager()
             exit(-1);
         }
 
-        printf("Working on %d loggers\n", loggerToWait);
+        //printf("Working on %d loggers\n", loggerToWait);
 
         //logger manager sleeps until 'actual_branches_num' logger are ready
         //to send the log of their clients
@@ -324,7 +323,7 @@ void loggerManager()
         //releasing loggers
         releaseWaitingLoggers();
 
-        printf("Loggers released\n");
+        //printf("Loggers released\n");
 
     }while(1);
 
