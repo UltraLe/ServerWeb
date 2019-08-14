@@ -24,6 +24,9 @@ void clients_has_changed()
     //the 2 branches with less number of connected clients will be selected
     //and eventually used in merge_branches
 
+    //before create or merge branches, the logger manager has to finish its job
+    //or the number of branches (and loggers) may increment or decrement while
+    //the loggerManager is working on them, and nothing will work anymore
     printf("Recived SIGUSR1 in handler, client has changed\n");
 
     int min = MAX_CLI_PER_SB+1;
@@ -85,6 +88,14 @@ void clients_has_changed()
     }else if(connectedClients < MERGE_SB_PERC*MAX_CLI_PER_SB*actual_branches_num
              && actual_branches_num > NUM_INIT_SB){
 
+        //before checking if merge operation is needed, the loggerManager
+        //has to finish the sorting operation of the logs
+        printf("Waiting on semLoggerManaher_Handler for merge, handler\n");
+        if(sem_wait(&semLoggerManaher_Handler) == -1){
+            perror("Error in sem_wait (semLoggerManaher_Handler)");
+            return;
+        }
+
         //reciver is the minPidClient
         //sender is the veryMinClient
         printf("Merging between sender %d, and reciver %d\n", veryMinPid, minPid);
@@ -93,6 +104,12 @@ void clients_has_changed()
             exit(-1);
         }
         //printf("Merge ended, actual_branches_num: %d\n", actual_branches_num);
+
+        printf("Posting on semLoggerManaher_Handler, handler\n");
+        if(sem_post(&semLoggerManaher_Handler) == -1){
+            perror("Error in sem_post (semLoggerManaher_Handler)");
+            return;
+        }
 
     }
 

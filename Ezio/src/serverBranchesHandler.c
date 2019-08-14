@@ -20,6 +20,7 @@ struct branches_info_list *last_branch_info;
 struct branch_handler_communication *array_hb;
 
 sem_t semOnBranchesNum;
+sem_t semLoggerManaher_Handler;
 
 #include "loggerManager.h"
 
@@ -309,9 +310,16 @@ int main(int argc, char **argv) {
         exit(-1);
     }
 
-    //semaphore used to tell logger that the manager has finished
+    //semaphore used to tell loggers that the manager has finished
     if (sem_init(&sem_loggermanagerfinished, 1, 0) == -1) {
         perror("Error in sem_init (semOnBranchesNum): ");
+        exit(-1);
+    }
+
+    //semaphore used to synchronize loggerManager and serverBranchesHandler
+    //during merge operation
+    if (sem_init(&semLoggerManaher_Handler, 1, 1) == -1) {
+        perror("Error in sem_init (semLoggerManaher_Handler): ");
         exit(-1);
     }
 

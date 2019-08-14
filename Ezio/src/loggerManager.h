@@ -111,7 +111,7 @@ int writeLogsOnDisk()
     int fd;
     off_t currentOffset;
 
-    if((fd = open(LOG_FILENAME, O_RDWR|O_APPEND|O_CREAT)) == -1){
+    if((fd = open(LOG_FILENAME, O_RDWR|O_APPEND|O_CREAT, 0666)) == -1){
         perror("Error in open (loggerManager)");
         return -1;
     }
@@ -188,8 +188,6 @@ int sortLoggersLogs()
 
         printf("After first for\n");
 
-        //TODO if a new branch has been created but is not included into the sorting operation
-        //TODO it has to be ignored
         for (struct branches_info_list *current = first_branch_info; j < loggerToWait; current = current->next, ++j) {
 
             //if a branch has been completed, then jump to the next one
@@ -206,7 +204,7 @@ int sortLoggersLogs()
             //increase i, and continue
             if((tempLog->log_type) == -1){
                 ++i;
-                printf("This branch has finisched\n");
+                printf("This branch has finished\n");
                 branchCompleted[j] = 1;
                 continue;
             }
@@ -267,7 +265,14 @@ void loggerManager()
 
     do{
 
-        printf("Logger manager Waiting for logger to finisch\n");
+        printf("Logger manager Waiting for logger to finish\n");
+
+        //a branch must not be removed (with merge operation) during sorting operation
+        //sem_wait
+        printf("Waiting on semLoggerManaher_Handler, logger\n");
+        if(sem_wait(&semLoggerManaher_Handler) == -1){
+            perror("Error in sem_wait (semLoggerManaher_Handler)");
+        }
 
         if(sem_wait(&semOnBranchesNum) == -1){
             perror("Error on sem_wait (semOnBranchesNum)");
@@ -285,7 +290,6 @@ void loggerManager()
 
         //logger manager sleeps until 'actual_branches_num' logger are ready
         //to send the log of their clients
-
         for(int i = 0; i < loggerToWait; ++i){
 
             if(sem_wait(&(info->sem_awakeLoggerManager)) == -1){
@@ -299,6 +303,13 @@ void loggerManager()
         if(sortLoggersLogs() == -1){
             printf("Error on sort loggers logs\n");
             exit(-1);
+        }
+
+        //a branch must not be removed (with merge operation) during sorting operation
+        //sem_post
+        printf("Posting on semLoggerManaher_Handler, logger\n");
+        if(sem_post(&semLoggerManaher_Handler) == -1){
+            perror("Error in sem_post (semLoggerManaher_Handler)");
         }
 
         //writing on disk
