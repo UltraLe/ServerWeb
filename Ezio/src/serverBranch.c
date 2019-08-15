@@ -30,9 +30,6 @@ int lastClientNumWhenChecked = 0;
 
 short serverIsFull = 0;
 
-//TODO variable used for detect loop bug, remove when is solved
-//int lastFdServed = 0, strike;
-
 fd_set readSet, allSet;
 int numSetsReady = 0, max_fd;
 
@@ -51,7 +48,6 @@ struct log *loggerLogs;
 int insert_new_client(int connect_fd, struct sockaddr_in clientAddress)
 {
     //printf("\tServer branch with pid %d inserting client...\n", getpid());
-
 
     struct client_list *new_entry;
 
@@ -212,19 +208,8 @@ int handleRequest(struct client_info *client)
 
     char *writeBuffer;
 
-    //printf("\tServer branch with pid %d after shitty variable\n", getpid());
-
     if(FD_ISSET(client->fd, &readSet)){
 
-        //TODO used for loop detection, remove
-        /*
-        if(lastFdServed == client->fd) {
-            strike++;
-        }else{
-            lastFdServed = client->fd;
-            strike = 0;
-        }
-         */
 
         //USATO PER TEST RIMUOVERE
         char *http_header = "HTTP/1.1 200 OK\nVary: Accept-Encoding\nContent-Type: text/html\nAccept-Ranges: bytes\nLast-Modified: Mon, 17 Jul 2017 19:28:15 GMT\nContent-Length: 180\nDate: Sun, 14 Jul 2019 10:44:37 GMT\nServer: lighttpd/1.4.35";
@@ -447,7 +432,7 @@ int main(int argc, char **argv)
 
     max_fd = handler_info->listen_fd;
 
-    //printf("\tServer branch with pid %d ready\n", getpid());
+    printf("\tServer branch with pid %d ready\n", getpid());
     //ready to serve clients
     while(1){
 
@@ -610,14 +595,5 @@ int main(int argc, char **argv)
 
         }
 
-        //printf("\tServer branch with pid %d has finisched to handle the clients (numSetsReady = %d)\n", getpid(), numSetsReady);
-
-        //loop is detected
-        /*
-        if(strike > 10) {
-            printf("\n\nLOOP DETECTED !!!!!!!!!\n\n");
-            sleep(1);
-        }
-         */
     }
 }

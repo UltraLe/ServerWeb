@@ -2,7 +2,7 @@
 // Created by ezio on 09/08/19.
 //
 
-#define MAX_LOGS_PER_BRANCH MAX_CLI_PER_SB*3      //used to define the length of the vector used by a branch
+#define MAX_LOGS_PER_BRANCH MAX_CLI_PER_SB*20      //used to define the length of the vector used by a branch
                                                   //to collect the client logs
 
 #define CLIENT_ACCEPTED 1                         //log types

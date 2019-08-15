@@ -177,15 +177,11 @@ int sortLoggersLogs()
     struct log minLog;
     int minSelected;
 
-    //printf("Sorting %d logger info\n", loggerToWait);
-
     for (int i = 0; i < loggerToWait; ) {
 
         j = 0;
         minIndex = 0;
         minSelected = 0;
-
-        //printf("After first for\n");
 
         for (struct branches_info_list *current = first_branch_info; j < loggerToWait; current = current->next, ++j) {
 
@@ -235,7 +231,7 @@ int sortLoggersLogs()
             //printf("Before calling logToString\n");
 
             if (logToString(minLog) == -1) {
-                perror("Error in logToString\n");
+                printf("Error in logToString, branch: numToWait: %d\n", loggerToWait);
                 return -1;
             }
 

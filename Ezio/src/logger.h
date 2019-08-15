@@ -65,6 +65,8 @@ void logger()
         for(int i = 0; i < numLogs; ++i)
             loggerLogs[i] = branchLogs[i];
 
+        //printf("Logger pid: %d has taken the loggerLogs from the branch\n", getpid());
+
         //if there are less logs than MAX_LOGS_PER BRANCH, the logger manager will have to know it
         if(numLogs < MAX_LOGS_PER_BRANCH)
             (loggerLogs[numLogs]).log_type = -1;

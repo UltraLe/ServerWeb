@@ -40,11 +40,6 @@ void clients_has_changed()
         exit(-1);
     }
 
-    //after the execution of the handler we have to check if other SIGUSR1 has arrived
-    sigset_t set;
-    sigaddset(&set,SIGUSR1);
-    sigprocmask(SIG_BLOCK,&set,NULL);
-
     int min = MAX_CLI_PER_SB+1;
     int veryMin = min;
     pid_t minPid = -1, veryMinPid = -1;
@@ -106,11 +101,12 @@ void clients_has_changed()
 
         //before checking if merge operation is needed, the loggerManager
         //has to finish the sorting operation of the logs
-        //printf("Waiting on semLoggerManaher_Handler for merge, handler\n");
-        if(sem_wait(&semLoggerManaher_Handler) == -1){
+        if (sem_wait(&semLoggerManaher_Handler) == -1) {
             perror("Error in sem_wait (semLoggerManaher_Handler) handler");
             return;
         }
+
+
 
         //reciver is the minPidClient
         //sender is the veryMinClient
@@ -119,16 +115,17 @@ void clients_has_changed()
             printf("Error in merge_branches\n");
             exit(-1);
         }
-        //printf("Merge ended, actual_branches_num: %d\n", actual_branches_num);
 
-        //printf("Posting on semLoggerManaher_Handler, handler\n");
-        if(sem_post(&semLoggerManaher_Handler) == -1){
+        if (sem_post(&semLoggerManaher_Handler) == -1) {
             perror("Error in sem_post (semLoggerManaher_Handler) handler");
             return;
         }
 
-    }
+        //if a merge has been done another may be needed
+        //and done by calling client_has_changed)
+        clients_has_changed();
 
+    }
 
     //restoring event hadnler
     act.sa_handler = clients_has_changed;
@@ -138,14 +135,5 @@ void clients_has_changed()
         exit(-1);
     }
 
-    //checking if any SIGUSR1 has arrived during the execution of this handler
-    if(sigismember(&set, SIGUSR1)){
-        sigemptyset(&set);
-        sigaddset(&set,SIGUSR1);
-        //printf("another SIGUSR has arrived while executing its handler\n");
-        sigprocmask(SIG_UNBLOCK,&set,NULL);
-    }
-
-    //printf("clients_has_changed ended \n");
     //branchesStatus();
 }

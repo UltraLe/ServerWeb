@@ -65,14 +65,14 @@ void recive_clients()
 
         //getting the address of the client recived
         socklen_t len;
-        if(getsockname(fileDescriptorRecived, (struct sockaddr *)&clientAddress, &len) == -1){
+        if(getpeername(fileDescriptorRecived, (struct sockaddr *)&clientAddress, &len) == -1){
             perror("Error in getsockname");
             exit(-1);
         }
 
         //memorize the file descriptor recived
         if(insert_new_client(fileDescriptorRecived, clientAddress) == -1){
-            printf("Error in insert_new_client (recive_clients)\n");
+            printf("Error in insert_new_client (recive_clients) branch: %d\n", getpid());
         }
 
         if(LOG(CLIENT_MERGED, clientAddress) == -1)
@@ -91,7 +91,7 @@ void recive_clients()
         exit(-1);
     }
 
-    printf("Recived all clients\n");
+    //printf("Recived all clients\n");
 }
 
 
@@ -105,7 +105,7 @@ void send_clients()
     struct sockaddr_un addr;
     int unixSock_fd, unixConnSock;
 
-    printf("Server branch %d sending clients\n", getpid());
+    //printf("Server branch %d sending clients\n", getpid());
 
     if((unixSock_fd = socket(AF_UNIX, SOCK_STREAM, 0)) == -1){
         perror("Unable to create unix socket: ");
@@ -167,7 +167,7 @@ void send_clients()
         return;
     }
 
-    printf("Sent all clients\n");
+    //printf("Sent all clients\n");
     if(close(unixConnSock) == -1){
         perror("Error in close connection unix socket (send_clients)");
         exit(-1);
