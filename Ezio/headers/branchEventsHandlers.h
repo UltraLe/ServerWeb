@@ -222,6 +222,9 @@ void clean(int signum)
         //if the client have been inactive for MAX_IDLE_TIME seconds, then colse its connection
         if(time_diff >= MAX_IDLE_TIME) {
 
+            if(LOG(CLIENT_IDLE, (current->client).client_addr) == -1)
+                printf("Error in LOG (client disconnected)");
+
             if (remove_client(current->client) == -1) {
                 printf("Error: could not remove the client (clean)\n");
                 return;

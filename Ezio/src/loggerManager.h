@@ -56,8 +56,8 @@ int logToString(struct log currentLog)
             strcpy(stringMessage, CLIENT_ACCEPTED_S);
             //printf("1\n");
             break;
-        case CLIENT_DISCONNECTED:
-            strcpy(stringMessage, CLIENT_DISCONNECTED_S);
+        case CLIENT_IDLE:
+            strcpy(stringMessage, CLIENT_IDLE_S);
             //printf("2\n");
             break;
         case CLIENT_ERROR_READ:

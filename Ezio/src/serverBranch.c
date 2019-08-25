@@ -211,8 +211,8 @@ int handleRequest(struct client_info *client)
     if(FD_ISSET(client->fd, &readSet)){
 
 
-        //USATO PER TEST RIMUOVERE
-        char *http_header = "HTTP/1.1 200 OK\nVary: Accept-Encoding\nContent-Type: text/html\nAccept-Ranges: bytes\nLast-Modified: Mon, 17 Jul 2017 19:28:15 GMT\nContent-Length: 180\nDate: Sun, 14 Jul 2019 10:44:37 GMT\nServer: lighttpd/1.4.35";
+        //USATO PER TEST RIMUOVERE, cont len 205
+        char *http_header = "HTTP/1.1 200 OK\nVary: Accept-Encoding\nContent-Type: text/html\nAccept-Ranges: bytes\nLast-Modified: Mon, 17 Jul 2017 19:28:15 GMT\nContent-Length: 205\nDate: Sun, 14 Jul 2019 10:44:37 GMT\nServer: lighttpd/1.4.35";
         char *http_body = "\n\n<!DOCTYPE html>\n"
                           "<html>\n"
                           "<body>\n"
@@ -248,9 +248,6 @@ int handleRequest(struct client_info *client)
                 return -1;
             }
 
-            if(LOG(CLIENT_DISCONNECTED, client->client_addr) == -1)
-                printf("Error in LOG (client disconnected)");
-
         }else if(numByteRead == -1) {
             perror("Error in read client information: ");
 
@@ -269,7 +266,9 @@ int handleRequest(struct client_info *client)
             //printf("\tServer branch wih pid: %d writing to %d\n",getpid(), client->fd);
 
             //USATA PER TEST
+            //TODO echo OFF!!!!!!
             if(writen(client->fd, http, strlen(http)) < 0){
+            //if(writen(client->fd, readBuffer, numByteRead) < 0){
                 perror("Error in writen (unable to reply): ");
                 return -1;
             }

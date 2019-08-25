@@ -13,7 +13,7 @@
 
 #define CLIENT_ERROR_READ 4
 
-#define CLIENT_DISCONNECTED 5
+#define CLIENT_IDLE 5
 
 #define CLIENT_MERGED 6
 
@@ -30,7 +30,7 @@
 
 #define CLIENT_SERVED_S "Client has been served\n"
 
-#define CLIENT_DISCONNECTED_S "Client disconnected from the server\n"
+#define CLIENT_IDLE_S "Client kicked for inactivity\n"
 
 #define CLIENT_MERGED_S "Client has been transfered to another server branch\n"
 
