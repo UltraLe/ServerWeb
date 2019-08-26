@@ -9,6 +9,7 @@
 
 char *response;
 struct paramResponse pertica;
+char *image_bufffer;
 
 void resolutionPhone(char *request){
     char userAgent[300];
@@ -46,7 +47,7 @@ void resolutionPhone(char *request){
     wurfl_device_destroy(hdevice);
     wurfl_destroy(hwurfl);
 
-}
+}}
 
 char *takeFile(char *path){
 
@@ -59,29 +60,27 @@ char *takeFile(char *path){
         exit(-1);
     }
 
-    int IMAGE_SIZE = 9000000;
+    int IMAGE_SIZE = 900000;
 
 
 
     int image_byte = lseek(im_fd, 0, SEEK_END);
-    char *image_bufer = (char *)malloc(image_byte* sizeof(char));
+    image_bufffer = (char *)malloc(IMAGE_SIZE);
 
     lseek(im_fd, 0, SEEK_SET);
 
     //TODO fuck
 
-    if(read(im_fd, image_bufer, IMAGE_SIZE) == -1){
+    if((pertica.payloadSize = read(im_fd, image_bufffer, IMAGE_SIZE)) == -1){
         perror("Error in reading the image");
         exit(-1);
     }
 
-    printf("Image read correctly\n");
-
-    pertica.lenght = image_byte;
+    printf("\tImage read correctly in takeFile\n%s\n", image_bufffer);
 
     printf("Image length: %d byte\n", image_byte);
 
-    return image_bufer;
+    return NULL;
 
 
     /*
@@ -192,7 +191,7 @@ char *sendError(){
 char *parsingManager(char *request) {
 
     char path[2048];
-    char data[900000];
+    char data[900001];
 
     memset(data, 0, sizeof(data));
 
@@ -240,11 +239,11 @@ char *parsingManager(char *request) {
         strcpy(pertica.type, TEXT);
 
         //TODO pagina HTML da aggiungere in memoria condivisa?
-        strcpy(data, takeFile("/sito/WebPage.html")); // provvisorio
+        memcpy(data, takeFile("/sito/WebPage.html"),pertica.payloadSize); // provvisorio
 
     } else if (strncmp(path, "/sito", 5) == 0) {
         strcpy(pertica.type, PNG);
-        strcpy(data, takeFile(path));
+        memcpy(data, takeFile(path),pertica.payloadSize);
 
         //     printf("%s\n", data);
 
@@ -253,8 +252,11 @@ char *parsingManager(char *request) {
         //TODO Inserire funzione resizing
 
        //PROVVISORIO
-        strcpy(data, takeFile(path));
-        strcpy(pertica.type,JPEG);
+        memcpy(data+1,image_bufffer,pertica.payloadSize);
+
+        printf("\tImage read correctly in parsingManager\n%s\n", data);
+
+        strcpy(pertica.type,PNG);
 
     } else {
         pertica.error = true;
@@ -265,17 +267,23 @@ char *parsingManager(char *request) {
         return sendError();
     }
 
-    response = (char *)malloc(sizeof(char)*pertica.lenght+300);
-    memset(response, 0, sizeof(response));
+    int responseSize = sizeof(char)*pertica.payloadSize+300;
 
-    PARSEHEADER(response,OK,pertica.type,pertica.lenght,ALIVE);
+    response = (char *)malloc(responseSize);
+
+    memset(response, 0, responseSize);
+
+    PARSEHEADER(response,OK,pertica.type,pertica.payloadSize,ALIVE);
+
     printf("Response ready:\n%s\n", response);
+
+    pertica.headerSize = strlen(response);
 
     //printf("%ld\n",strlen(data));
     //printf("%ld\n",pertica.lenght);
     if(!pertica.head){
-        printf("Not HEAD request\n");
-        strcat(response, data);
+        printf("GET method, inserting image\n");
+        memcpy(response + pertica.headerSize, data, pertica.payloadSize );
         //strcat(response,"\n\n");
 
     }

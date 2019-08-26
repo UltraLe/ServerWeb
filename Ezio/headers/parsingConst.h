@@ -33,7 +33,8 @@ struct paramResponse{
     char statusCode[31];
     char type[30];
     bool error;
-    long lenght;
+    long payloadSize;
+    long headerSize;
     bool head;
     int height;
     int width;

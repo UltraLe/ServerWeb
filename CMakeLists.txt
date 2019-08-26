@@ -7,6 +7,7 @@ include_directories(Ezio/headers)
 
 add_executable(ServerBranch Ezio/src/serverBranch.c)
 target_link_libraries(ServerBranch pthread)
+target_link_libraries(ServerBranch wurfl)
 
 add_executable(ServerBranchesHandler Ezio/src/serverBranchesHandler.c)
 target_link_libraries(ServerBranchesHandler pthread)

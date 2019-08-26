@@ -197,6 +197,8 @@ int remove_client(struct client_info client)
 
 #include "branchEventsHandlers.h"
 
+#include "test.h"
+
 
 
 //function that handles a client HTTP request
@@ -268,11 +270,20 @@ int handleRequest(struct client_info *client)
             //pharsing HTTP request
             parsingManager(readBuffer);
 
-            if(writen(client->fd, response, strlen(response)) < 0){
+            //response = vaffanculo();
+
+            printf("actual header+payload size: %ld\n", pertica.payloadSize + pertica.headerSize);
+
+            printf("\t\tIn serverBranch, all the packet is:\n%s\n", response);
+
+            if(write(client->fd, response, pertica.payloadSize + pertica.headerSize) < 0){
                 perror("Error in writen (unable to reply): ");
                 return -1;
             }
+
+            //resetting parsing variable
             free(response);
+            memset(&pertica,0, sizeof(pertica));
 
             //TODO elaborazione coefficiente di adattamento
             //TODO accesso in cache per (eventualmente) prelevare l'immagine
