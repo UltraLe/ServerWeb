@@ -27,6 +27,8 @@
 
 #define DATAERROR(data,error) sprintf(data,"<!DOCTYPE html><html><head><title>Page Error</title></head><body><h1 align=\"center\">Error %s!</h1></body></html>", error)
 
+//TODO fuck2
+
 struct paramResponse{
     char statusCode[31];
     char type[30];

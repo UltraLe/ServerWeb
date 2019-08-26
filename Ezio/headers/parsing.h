@@ -68,6 +68,8 @@ char *takeFile(char *path){
 
     lseek(im_fd, 0, SEEK_SET);
 
+    //TODO fuck
+
     if(read(im_fd, image_bufer, IMAGE_SIZE) == -1){
         perror("Error in reading the image");
         exit(-1);
