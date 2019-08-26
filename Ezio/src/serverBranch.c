@@ -11,6 +11,8 @@
 #include <asm/errno.h>
 #include "writen.h"
 
+#include "parsing.h"
+
 #define READ_BUFFER_BYTE 4096
 
 struct client_list{
@@ -263,19 +265,15 @@ int handleRequest(struct client_info *client)
             //Updating client's last time active
             client->last_time_active = time(0);
 
-            //printf("\tServer branch wih pid: %d writing to %d\n",getpid(), client->fd);
+            //pharsing HTTP request
+            parsingManager(readBuffer);
 
-            //USATA PER TEST
-            //TODO echo OFF!!!!!!
-            if(writen(client->fd, http, strlen(http)) < 0){
-            //if(writen(client->fd, readBuffer, numByteRead) < 0){
+            if(writen(client->fd, response, strlen(response)) < 0){
                 perror("Error in writen (unable to reply): ");
                 return -1;
             }
-            //FINE ROBA DA TOGLIERE DOPO IL MERGE
+            free(response);
 
-            //TODO qui funzioni che gestiscono
-            //TODO richiesta HTTP
             //TODO elaborazione coefficiente di adattamento
             //TODO accesso in cache per (eventualmente) prelevare l'immagine
             //TODO invio della risposta HTTP
