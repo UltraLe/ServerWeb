@@ -269,14 +269,7 @@ int handleRequest(struct client_info *client)
             //pharsing HTTP request
             parsingManager(readBuffer);
 
-
-            printf("---QUALITY IMAGE: %f\n", setting.quality );
-            printf("---TYPE IMAGE: %s\n", setting.type );
-
-
-            printf("actual header+payload size: %ld\n", setting.payloadSize + setting.headerSize);
-
-            printf("\t\tIn serverBranch, all the packet is:\n%s\n", response);
+            printf("\t\tIn serverBranch, all the packet is:\n%s\n", response); //da levare
 
             if(write(client->fd, response, setting.payloadSize + setting.headerSize) < 0){
                 perror("Error in writen (unable to reply): ");
