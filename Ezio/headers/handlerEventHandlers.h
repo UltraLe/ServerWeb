@@ -12,9 +12,18 @@ void sig_chl_handler(int signum)
     pid_t pid;
 
     while((pid = waitpid(WAIT_ANY, &status, WNOHANG)) > 0){
-        printf("Serer branch %d has terminated\n", pid);
+        printf("Serer branch %d has terminated with exit code %d\n", pid, status);
+
+        //if the server branches crashes, the handler creates a new one
+        if(status != 0) {
+            if (create_new_branch()) {
+                printf("Error in create_new_branch (generating point)\n");
+                exit(-1);
+            }
+        }
         return;
     }
+
 }
 
 
