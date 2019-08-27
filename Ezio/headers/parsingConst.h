@@ -12,6 +12,7 @@
 #define BR "400 Bad Request"
 #define NF  "404 Not Found"
 #define MNA  "405 Method Not Allowed"
+#define NA   "406 Not Acceptable" 
 #define ISE  "500 Internal Server Error"
 #define VNS  "505 HTTP Version Not Supported"
 
@@ -27,8 +28,6 @@
 
 #define DATAERROR(data,error) sprintf(data,"<!DOCTYPE html><html><head><title>Page Error</title></head><body><h1 align=\"center\">Error %s!</h1></body></html>", error)
 
-//TODO fuck2
-
 struct paramResponse{
     char statusCode[31];
     char type[30];
@@ -38,4 +37,5 @@ struct paramResponse{
     bool head;
     int height;
     int width;
+    double quality;
 };

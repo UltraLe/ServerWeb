@@ -8,8 +8,92 @@
 
 
 char *response;
-struct paramResponse pertica;
-char *image_bufffer;
+struct paramResponse setting;
+char *payloadBuffer;
+
+void acceptAnalyzer(char *request) {
+    setting.quality = -1;
+    char *attribute;
+    char q[4];
+    memset(q,0,4);
+    double qPng = 0,qJpeg = 0,qAll = 0, qImages = 0;
+    char accept[200];
+    char *acceptStart = strstr(request, "Accept:") + 8;
+    strncpy(accept, acceptStart, strstr(acceptStart, "\n") -1 - acceptStart);
+    
+    printf("ACCEPT : %s\n", accept);
+
+    if ((attribute = strstr(accept, "image/jpeg")) != NULL) {
+        if (!strncmp(attribute + 10, ";q", 2)) {
+            qJpeg = atof(strncpy(q, attribute + 13, 3));
+        } else qJpeg = 1;
+
+    }
+    printf("q = %s\n",q);
+
+    printf("qJpeg = %f\n\n",qJpeg);
+
+    if ((attribute = strstr(accept, "image/png")) != NULL) {
+        if (!strncmp(attribute + 9, ";q", 2)) {
+            qJpeg = atof(strncpy(q, attribute + 12, 3));
+        } else qJpeg = 1;
+    }
+    
+    printf("q = %s\n",q);
+    printf("qPng = %f\n\n",qImages);
+
+    if ((attribute = strstr(accept, "image/*")) != NULL) {
+        if (!strncmp(attribute + 7, ";q", 2)) {
+            qImages = atof(strncpy(q, attribute + 10, 3));
+        } else qImages =1;
+    }
+    printf("q = %s\n",q);
+
+    printf("qImage/* = %f\n\n",qImages);
+    if ((qJpeg==0 || qPng ==0) && qImages ==0){
+        if ((attribute = strstr(accept, "*/*")) != NULL) {
+          if (!strncmp(attribute + 3, ";q", 2)) {
+              qAll = atof(strncpy(q, attribute + 6, 3));
+            } else qAll = 1;
+        }
+    }
+    printf("q = %s\n",q);
+
+    printf("qAll = %f\n\n",qAll);
+
+
+    if (qAll== qJpeg == qPng){
+        strcpy(setting.type,NOTHING);
+        setting.quality = qAll;
+    }
+    else {
+        double qMax= qAll;
+        strcpy(setting.type,NOTHING);
+        setting.quality = qAll;
+
+
+        if(qJpeg > qMax){
+            strcpy(setting.type,JPEG);
+            setting.quality = qJpeg;
+        }
+        else if (qPng > qMax){
+            strcpy(setting.type,PNG);
+            setting.quality = qPng;
+        }
+        else if (qImages > qMax){
+            strcpy(setting.type,NOTHING);
+            setting.quality = qImages;
+        }
+    }
+    if (qAll == 0 && qJpeg ==0 && qPng == 0){
+        setting.error = true;
+        strcpy(setting.statusCode, NA);
+    }
+    printf("qMax = %s\n",setting.type);
+
+    printf("qMax = %f\n\n",setting.quality);
+
+}
 
 void resolutionPhone(char *request){
     char userAgent[300];
@@ -37,135 +121,81 @@ void resolutionPhone(char *request){
     wurfl_device_handle hdevice = wurfl_lookup_useragent(hwurfl, userAgent);
     if (hdevice) {
         // DEVICE FOUND
-        pertica.width = atoi(wurfl_device_get_capability(hdevice, "resolution_width"));
-        pertica.height = atoi(wurfl_device_get_capability(hdevice, "resolution_height"));
+        setting.width = atoi(wurfl_device_get_capability(hdevice, "resolution_width"));
+        setting.height = atoi(wurfl_device_get_capability(hdevice, "resolution_height"));
 
-        //printf("pertica.widht = %d\n", pertica.width);
-        //printf("brand_name = %d\n\n\n", pertica.height);
-        //printf("brand_name = %s\n", wurfl_device_get_capability(hdevice, "resolution_width"));
-        //printf("brand_name = %s\n", wurfl_device_get_capability(hdevice, "resolution_width"));}
     wurfl_device_destroy(hdevice);
     wurfl_destroy(hwurfl);
 
 }}
 
 char *takeFile(char *path){
-
     int im_fd;
 
     printf("Path: %s\n",path+1);
 
     if((im_fd = open(path+1, O_RDONLY)) == -1){
-        perror("Unable to open the image");
-        exit(-1);
+        perror("file not Found");
+        setting.error = true;
+        strcpy(setting.statusCode, NF);
+        return NULL;
     }
 
-    int IMAGE_SIZE = 900000;
-
-
-
     int image_byte = lseek(im_fd, 0, SEEK_END);
-    image_bufffer = (char *)malloc(IMAGE_SIZE);
+    payloadBuffer = (char *)malloc(image_byte);
 
     lseek(im_fd, 0, SEEK_SET);
 
-    //TODO fuck
-
-    if((pertica.payloadSize = read(im_fd, image_bufffer, IMAGE_SIZE)) == -1){
+    if((setting.payloadSize = read(im_fd, payloadBuffer, image_byte)) == -1){
         perror("Error in reading the image");
-        exit(-1);
+        setting.error = true;
+        strcpy(setting.statusCode, ISE );
+        return NULL;
     }
-
-    printf("\tImage read correctly in takeFile\n%s\n", image_bufffer);
-
-    printf("Image length: %d byte\n", image_byte);
 
     return NULL;
-
-
-    /*
-    //printf("%s\n",path+1);
-    FILE* file = fopen(path+1, "rb");
-
-    if(file == NULL){
-        perror("file non trovato");
-        pertica.error = true;
-        strcpy(pertica.statusCode, NF);
-        return NULL;
-    }
-
-    int fs = fseek(file, 0, SEEK_END);
-
-    printf("Image dimension: %d\n", fs);
-
-    if (fs == -1){
-        perror("Positioning stream pointer error");
-        pertica.error = true;
-        strcpy(pertica.statusCode,ISE);
-        return NULL;
-    }
-
-    unsigned long fileLen = ftell(file);
-
-    printf("Image dimension wih ftell: %d\n", fileLen);
-
-    if (fileLen == -1){
-        perror("ftell error");
-        pertica.error = true;
-        strcpy(pertica.statusCode,ISE);
-        return NULL;
-    }
-
-    pertica.lenght = fileLen;
-
-    char* file_data;
-
-    rewind(file);
-
-    file_data = malloc((fileLen)*sizeof(char));
-
-    if (file_data == NULL){
-        perror("Memory error");
-        pertica.error = true;
-        strcpy(pertica.statusCode,ISE);
-        return NULL;
-    }
-
-    char s;
-    while (fread(&s, 1, 1, file)) {
-        strncat(file_data,&s,1);
-    }
-
-    //printf("file contents: %s\n", file_data);
-//    printf("file contents: %s\n", "FAMMELO VEDERE");
-
-    fclose(file);
-    return file_data;
-     */
 }
 
 char *uriAnalyzer(char *request){
     char buff[2000];
-    char *token ;
+    char *pathToken ;
+    char *HTTPToken;
 
     strcpy(buff,request);
-    strtok(buff, " ");
-    token = strtok(NULL, " ");
-    //  printf("Io son il token %s\n",token);
+    strtok(buff, " \n\r");
+    pathToken = strtok(NULL, " \n\r");
+    HTTPToken = strtok(NULL," \n\r");
 
-    if((strncmp(token,"/",1) == 0) && strlen(token)==1){
+    printf("pathToken: -%s-\n", pathToken);
+    printf("HTTP Token:-%s-\n", HTTPToken);
+
+    if ((HTTPToken != NULL) && !(strcmp(HTTPToken,"HTTP/1.0") == 0 ||
+                            strcmp(HTTPToken,"HTTP/1.1") == 0 ||
+                            strcmp(HTTPToken,"HTTP/2.0")== 0)){
+    //   printf("io sono nell'Uri1");
+
+       setting.error = true;
+        strcpy(setting.statusCode, BR);
+        return pathToken;
+
+    }
+  //  printf("io sono nell'Uri2");
+
+    if(strcmp(pathToken,"/") == 0) {
+   //     printf("io sono nell'Uri3");
+
         return "";
     }
-    else if (strncmp(token,"/",1)==0){
-        return token;
-
+    else if (strncmp(pathToken,"/",1)==0 && strlen(pathToken)>1){
+  //      printf("io sono nell'Uri");
+        return pathToken;
     }
 
-    //Se si arriva qui la richiesta risulta errata
-    pertica.error = true;
-    strcpy(pertica.statusCode, BR);
+    //If you arrive here the request's path is incorrect
+    setting.error = true;
+    strcpy(setting.statusCode, BR);
 
-    return token;
+    return pathToken;
 
 }
 
@@ -173,19 +203,15 @@ char *sendError(){
     char header[200];
     char data[400];
 
-    DATAERROR(data, pertica.statusCode);
-    PARSEHEADER(header,pertica.statusCode,TEXT,strlen(data),CLOSE);
+    DATAERROR(data, setting.statusCode);
+    setting.payloadSize = strlen(data);
+    PARSEHEADER(header,setting.statusCode,TEXT,setting.payloadSize,CLOSE);
+    setting.headerSize = strlen(header);
+
     response = (char *)malloc(500* sizeof(char));
-    if(!response){
-        perror("non sono riuscito ad allocare");
-    }
     strcpy(response,header);
     strcat(response,data);
-
-    //printf("\n\n\n-------------------ecco il pacchetto----------------------\n%s\n", response);
-
-    return response;
-
+    return NULL ;
 
 }
 char *parsingManager(char *request) {
@@ -195,100 +221,83 @@ char *parsingManager(char *request) {
 
     memset(data, 0, sizeof(data));
 
-    printf("In parsingManager:\n%s\n", request);
-    printf("Con puts: ");
-    puts(request);
+    printf("In parsingManager:\n%s\n", request); //DA TOGLIERE
 
-
-    if (strncmp(request, "GET", 3) == 0) {
+    //Check that the method is acceptable
+    if (strncmp(request, "GET ", 4) == 0) {
         //Going over the if
 
-    } else if (strncmp(request, "HEAD", 4) == 0) {
-        pertica.head = true;
+    } else if (strncmp(request, "HEAD ", 5) == 0) {
+        setting.head = true;
 
-    } else if (strncmp(request, "POST", 4) == 0 ||
-               strncmp(request, "DELETE", 6) == 0 ||
-               strncmp(request, "PUT", 3) == 0 ||
-               strncmp(request, "TRACE", 5) == 0 ||
-               strncmp(request, "OPTIONS", 7) == 0) {
-        pertica.error = true;
-        strcpy(pertica.statusCode, MNA);
+    } else if (strncmp(request, "POST ", 5) == 0 ||
+               strncmp(request, "DELETE ", 7) == 0 ||
+               strncmp(request, "PUT ", 4) == 0 ||
+               strncmp(request, "TRACE ", 6) == 0 ||
+               strncmp(request, "OPTIONS ", 8) == 0) {
+        setting.error = true;
+        strcpy(setting.statusCode, MNA);
 
     } else {
-        pertica.error = true;
-        strcpy(pertica.statusCode, BR);
+        setting.error = true;
+        strcpy(setting.statusCode, BR);
     }
 
-    if (pertica.error) {
+    if (setting.error) {
         return sendError();
     }
 
-
-    //Qui vado a creare i data
-
+    //I check that the path is correct
     strcpy(path, uriAnalyzer(request));
 
-    if (pertica.error) {
+    if (setting.error) {
         return sendError();
     }
-
-    printf("Path trovato: %s\n", path);
 
     //home page requested
     if (strcmp(path, "") == 0) {
-        strcpy(pertica.type, TEXT);
-
-        //TODO pagina HTML da aggiungere in memoria condivisa?
-        memcpy(data, takeFile("/sito/WebPage.html"),pertica.payloadSize); // provvisorio
+        strcpy(setting.type, TEXT);
+        takeFile("/sito/WebPage.html");
 
     } else if (strncmp(path, "/sito", 5) == 0) {
-        strcpy(pertica.type, PNG);
-        memcpy(data, takeFile(path),pertica.payloadSize);
-
-        //     printf("%s\n", data);
+        strcpy(setting.type, PNG);
+        takeFile(path);
 
     } else if (strncmp(path, "/Images/", 7) == 0) {
         resolutionPhone(request);
         //TODO Inserire funzione resizing
 
        //PROVVISORIO
-        memcpy(data+1,image_bufffer,pertica.payloadSize);
-
-        printf("\tImage read correctly in parsingManager\n%s\n", data);
-
-        strcpy(pertica.type,PNG);
+        acceptAnalyzer(request);
+        if (setting.error) {
+            return sendError();
+        }
+        takeFile(path);
+        //strcpy(setting.type,JPEG);//Lo setta riccardo
 
     } else {
-        pertica.error = true;
-        strcpy(pertica.statusCode, NF);
+        setting.error = true;
+        strcpy(setting.statusCode, NF);
     }
 
-    if (pertica.error) {
+    if (setting.error) {
         return sendError();
     }
 
-    int responseSize = sizeof(char)*pertica.payloadSize+300;
+    int responseSize = sizeof(char)*setting.payloadSize+300;
 
     response = (char *)malloc(responseSize);
-
     memset(response, 0, responseSize);
 
-    PARSEHEADER(response,OK,pertica.type,pertica.payloadSize,ALIVE);
+    // I set the header
+    PARSEHEADER(response,OK,setting.type,setting.payloadSize,ALIVE);
+    printf("Response ready:\n%s\n", response);  //DA TOGLIERE
+    setting.headerSize = strlen(response);
 
-    printf("Response ready:\n%s\n", response);
-
-    pertica.headerSize = strlen(response);
-
-    //printf("%ld\n",strlen(data));
-    //printf("%ld\n",pertica.lenght);
-    if(!pertica.head){
+    //I check if the metod is HEAD
+    if(!setting.head){
         printf("GET method, inserting image\n");
-        memcpy(response + pertica.headerSize, data, pertica.payloadSize );
-        //strcat(response,"\n\n");
-
+        memcpy(response + setting.headerSize, payloadBuffer, setting.payloadSize );
     }
-
-    //printf("\n\n\n-------------------ecco il pacchetto----------------------\n%s\n", response);
-    //printf("%ld\n",pertica.lenght);
     return response;
 }
