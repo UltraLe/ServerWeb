@@ -164,20 +164,17 @@ char *uriAnalyzer(char *request){
     pathToken = strtok(NULL, " \n\r");
     HTTPToken = strtok(NULL," \n\r");
 
-    printf("pathToken: -%s-\n", pathToken);
-    printf("HTTP Token:-%s-\n", HTTPToken);
-
     if ((HTTPToken != NULL) && !(strcmp(HTTPToken,"HTTP/1.0") == 0 ||
                             strcmp(HTTPToken,"HTTP/1.1") == 0 ||
                             strcmp(HTTPToken,"HTTP/2.0")== 0)){
     //   printf("io sono nell'Uri1");
 
-       setting.error = true;
+        setting.error = true;
         strcpy(setting.statusCode, BR);
         return pathToken;
 
     }
-  //  printf("io sono nell'Uri2");
+
 
     if(strcmp(pathToken,"/") == 0) {
    //     printf("io sono nell'Uri3");
