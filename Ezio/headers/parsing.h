@@ -16,33 +16,40 @@ void acceptAnalyzer(char *request) {
     char *attribute;
     char q[4];
     memset(q,0,4);
-    double qPng = 0,qJpeg = 0,qAll = 0, qImages = 0;
+
+    double qPng = 0, qJpeg = 0, qAll = 0, qImages = 0;
     char accept[200];
+    memset(accept, 0, 200);
+
     char *acceptStart = strstr(request, "Accept:") + 8;
+
     strncpy(accept, acceptStart, strstr(acceptStart, "\n") -1 - acceptStart);
-    
+
     printf("ACCEPT : %s\n", accept);
 
+    if ((attribute = strstr(accept, "image/png")) != NULL) {
+        printf("PNG: %s\n", attribute);
+        if (!strncmp(attribute + 9, ";q", 2)) {
+            qPng = atof(strncpy(q, attribute + 12, 3));
+        } else qPng = 1;
+    }
+
+    printf("q = %s\n",q);
+    printf("qPng = %f\n\n",qPng);
+
     if ((attribute = strstr(accept, "image/jpeg")) != NULL) {
+        printf("JPEG: %s\n", attribute);
         if (!strncmp(attribute + 10, ";q", 2)) {
             qJpeg = atof(strncpy(q, attribute + 13, 3));
         } else qJpeg = 1;
 
     }
-    printf("q = %s\n",q);
 
-    printf("qJpeg = %f\n\n",qJpeg);
-
-    if ((attribute = strstr(accept, "image/png")) != NULL) {
-        if (!strncmp(attribute + 9, ";q", 2)) {
-            qJpeg = atof(strncpy(q, attribute + 12, 3));
-        } else qJpeg = 1;
-    }
-    
     printf("q = %s\n",q);
-    printf("qPng = %f\n\n",qImages);
+    printf("qJpeg = %f\n\n", qJpeg);
 
     if ((attribute = strstr(accept, "image/*")) != NULL) {
+        printf("IMAGE/*: %s\n", attribute);
         if (!strncmp(attribute + 7, ";q", 2)) {
             qImages = atof(strncpy(q, attribute + 10, 3));
         } else qImages =1;
@@ -52,9 +59,14 @@ void acceptAnalyzer(char *request) {
     printf("qImage/* = %f\n\n",qImages);
     if ((qJpeg==0 || qPng ==0) && qImages ==0){
         if ((attribute = strstr(accept, "*/*")) != NULL) {
-          if (!strncmp(attribute + 3, ";q", 2)) {
-              qAll = atof(strncpy(q, attribute + 6, 3));
-            } else qAll = 1;
+
+            printf("*/*: %s\n", attribute);
+
+            if (!strncmp(attribute + 3, ";q", 2)) {
+                qAll = atof(strncpy(q, attribute + 6, 3));
+            } else {
+                qAll = 1;
+            }
         }
     }
     printf("q = %s\n",q);
