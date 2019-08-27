@@ -15,52 +15,37 @@ void acceptAnalyzer(char *request) {
     setting.quality = -1;
     char *attribute;
     char q[4];
-    memset(q,0,4);
+    memset(q, 0, 4);
 
     double qPng = 0, qJpeg = 0, qAll = 0, qImages = 0;
     char accept[200];
     memset(accept, 0, 200);
 
     char *acceptStart = strstr(request, "Accept:") + 8;
-
-    strncpy(accept, acceptStart, strstr(acceptStart, "\n") -1 - acceptStart);
-
-    printf("ACCEPT : %s\n", accept);
+    strncpy(accept, acceptStart, strstr(acceptStart, "\n") - 1 - acceptStart);
 
     if ((attribute = strstr(accept, "image/png")) != NULL) {
-        printf("PNG: %s\n", attribute);
         if (!strncmp(attribute + 9, ";q", 2)) {
             qPng = atof(strncpy(q, attribute + 12, 3));
         } else qPng = 1;
     }
 
-    printf("q = %s\n",q);
-    printf("qPng = %f\n\n",qPng);
-
     if ((attribute = strstr(accept, "image/jpeg")) != NULL) {
-        printf("JPEG: %s\n", attribute);
         if (!strncmp(attribute + 10, ";q", 2)) {
             qJpeg = atof(strncpy(q, attribute + 13, 3));
         } else qJpeg = 1;
-
     }
 
-    printf("q = %s\n",q);
-    printf("qJpeg = %f\n\n", qJpeg);
-
-    if ((attribute = strstr(accept, "image/*")) != NULL) {
-        printf("IMAGE/*: %s\n", attribute);
-        if (!strncmp(attribute + 7, ";q", 2)) {
-            qImages = atof(strncpy(q, attribute + 10, 3));
-        } else qImages =1;
+    if (qJpeg == 0 || qPng == 0) {
+        if ((attribute = strstr(accept, "image/*")) != NULL) {
+             if (!strncmp(attribute + 7, ";q", 2)) {
+                 qImages = atof(strncpy(q, attribute + 10, 3));
+             } else qImages = 1;
+        }
     }
-    printf("q = %s\n",q);
-
-    printf("qImage/* = %f\n\n",qImages);
+    
     if ((qJpeg==0 || qPng ==0) && qImages ==0){
         if ((attribute = strstr(accept, "*/*")) != NULL) {
-
-            printf("*/*: %s\n", attribute);
 
             if (!strncmp(attribute + 3, ";q", 2)) {
                 qAll = atof(strncpy(q, attribute + 6, 3));
@@ -69,14 +54,14 @@ void acceptAnalyzer(char *request) {
             }
         }
     }
-    printf("q = %s\n",q);
 
-    printf("qAll = %f\n\n",qAll);
-
-
-    if (qAll== qJpeg == qPng){
+    if (qAll== qJpeg && qAll == qPng){
         strcpy(setting.type,NOTHING);
         setting.quality = qAll;
+    }
+    else if (qJpeg == qPng){
+        strcpy(setting.type,NOTHING);
+        setting.quality = qPng;
     }
     else {
         double qMax= qAll;
@@ -87,24 +72,25 @@ void acceptAnalyzer(char *request) {
         if(qJpeg > qMax){
             strcpy(setting.type,JPEG);
             setting.quality = qJpeg;
+            qMax= qJpeg;
+
         }
-        else if (qPng > qMax){
+        if (qPng > qMax){
             strcpy(setting.type,PNG);
             setting.quality = qPng;
+            qMax = qPng;
+
         }
-        else if (qImages > qMax){
+        if (qImages >= qMax){
             strcpy(setting.type,NOTHING);
             setting.quality = qImages;
+
         }
     }
-    if (qAll == 0 && qJpeg ==0 && qPng == 0){
+    if (qAll == 0 && qJpeg ==0 && qPng == 0 && qImages == 0){
         setting.error = true;
         strcpy(setting.statusCode, NA);
     }
-    printf("qMax = %s\n",setting.type);
-
-    printf("qMax = %f\n\n",setting.quality);
-
 }
 
 void resolutionPhone(char *request){
