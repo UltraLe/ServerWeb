@@ -252,6 +252,14 @@ int handleRequest(struct client_info *client)
             //pharsing HTTP request
             parsingManager(readBuffer);
 
+            //TODO move into parsingManager
+            //setting the values to the struct that will be used into the cache
+            memset(&imageToInsert, 0, sizeof(imageToInsert));
+            imageToInsert.height = setting.height;
+            imageToInsert.width = setting.width;
+            imageToInsert.quality = ((int)(setting.quality*10))%10;
+
+
             printf("\t\tIn serverBranch, all the packet is:\n%s\n", response); //da levare
 
             if(write(client->fd, response, setting.payloadSize + setting.headerSize) < 0){
