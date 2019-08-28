@@ -35,6 +35,12 @@ short serverIsFull = 0;
 fd_set readSet, allSet;
 int numSetsReady = 0, max_fd;
 
+struct hash_element *cache;
+sem_t activateCacheManager;
+sem_t cacheManagerHasFinished;
+
+#include "cacheManager.c"
+
 #include "checkClientPercentage.h"
 
 //local logs used by each server branch
@@ -337,7 +343,6 @@ int main(int argc, char **argv)
     }
 
     //attaching to cache
-    void *cache;
     int id_cache;
     if((id_cache = shmget(IPC_HNDLR_INFO_KEY, sizeof(struct handler_info), 0666)) == -1){
         perror("Error in shmget (getting handler_info structure): ");
@@ -377,11 +382,27 @@ int main(int argc, char **argv)
         exit(-1);
     }
 
-    pthread_t loggerPid;
+    //initializion semaphore used to synchronize cacheManager and server branch
+    if(sem_init(&activateCacheManager, 1, 0) == -1){
+        perror("Error in sem_init (activateCacheManager)");
+        exit(-1);
+    }
+    if(sem_init(&cacheManagerHasFinished, 1, 0) == -1){
+        perror("Error in sem_init (cacheManagerHasFinished)");
+        exit(-1);
+    }
+
+    pthread_t loggerPid, cacheManagerPid;
 
     //creating logger
     if(pthread_create(&loggerPid, NULL, (void *)logger, NULL)){
         perror("Error in pthread_create (logger)");
+        exit(-1);
+    }
+
+    //creating cacheManager
+    if(pthread_create(&cacheManagerPid, NULL, (void *)cacheManager, NULL)){
+        perror("Error in pthread_create (cacheManager)");
         exit(-1);
     }
 

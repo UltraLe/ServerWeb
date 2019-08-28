@@ -237,6 +237,7 @@ int main(int argc, char **argv) {
     int listen_fd;
     struct sockaddr_in address;
     int socket_option = 1;
+    struct hash_element *cache;
 
     //initializing cache address
     if (shmget(IPC_CACHE_KEY, CACHE_BYTES, IPC_CREAT|0666) == -1) {
@@ -267,6 +268,11 @@ int main(int argc, char **argv) {
     }
 
     if ((info = shmat(id_info, NULL, SHM_R | SHM_W)) == (void *) -1) {
+        perror("Error in shmat");
+        exit(-1);
+    }
+
+    if ((cache = shmat(id_info, NULL, SHM_R | SHM_W)) == (void *) -1) {
         perror("Error in shmat");
         exit(-1);
     }
@@ -390,6 +396,24 @@ int main(int argc, char **argv) {
         (array_hb +i)->branch_pid = -1;
     }
     printf("Shared memory initialized\n");
+
+    printf("Initializing cache\n");
+    memset(cache, 0, CACHE_BYTES);
+    for(int i = 0; i < MAX_HASH_KEYS; ++i){
+        //initializing the semaphore that the cacheManager
+        //of each ServerBranch will use
+        if (sem_init(&(cache[i].semToHashBlock), 1, 1) == -1) {
+            perror("Error in sem_init (semToHashBlock): ");
+            exit(-1);
+        }
+
+        //initializing the counter used to select the least frequently
+        //used images into the cache_element
+        for(int j = 0; j < MAX_IMAGE_NUM_PER_KEY; ++j)
+            ((cache[i].conflictingImages)[j]).counter = 0;
+
+    }
+    printf("Cache initialized\n");
 
     printf("CHK_PERC_EACH: %d\n", CHECK_PERC_EACH);
 

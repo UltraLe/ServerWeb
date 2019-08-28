@@ -2,11 +2,6 @@
 // Created by giovanni on 22/08/19.
 //
 
-#ifndef SERVERWEB_PARSING_H
-#define SERVERWEB_PARSING_H
-
-#endif //SERVERWEB_PARSING_H
-
 #define OK  "200 OK"
 #define NC  "204 No Content"
 #define BR "400 Bad Request"

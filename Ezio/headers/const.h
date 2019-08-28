@@ -27,6 +27,8 @@
 
 #include <pthread.h>
 
+#include "cacheConst.h"
+
 #define NUM_INIT_SB 4           //number of the server branches that will be always
                                 //ready to serve clients
 
@@ -53,7 +55,7 @@
 
 #define SIGNAL_PERC3 0.8
 
-#define CACHE_BYTES 1048576     //number of bytes preserved for the cache (10MB)
+#define CACHE_BYTES sizeof(struct hash_element)*MAX_HASH_KEYS
 
 #define IPC_CACHE_KEY 30        //key to attach to the cache
 

@@ -4,6 +4,8 @@
 
 #include "const.h"
 
+#include "hashFunction.h"
+
 #define IMAGES_NUM 8
 
 #define MAX_COMMON_WIDTH 6
@@ -16,22 +18,6 @@ char *imagesName[MAX_IMAGENAME_DIM] = {"caneBagnato", "faro", "nuvole", "OcchioD
 int commonWidth[MAX_COMMON_WIDTH] = {800, 1080, 720, 480, 600, 540};
 
 int commonHeight[MAX_COMMON_HEIGHT] = {1920, 1024, 1280, 854, 960};
-
-unsigned int hashFunction(struct image imageTest)
-{
-    int key = 0;
-
-    //here comes the magic, the hash function
-    key += strlen(imageTest.name)*11;
-    key += imageTest.height*imageTest.width;
-    key *= imageTest.quality;
-    key += imageTest.name[0];
-    key += imageTest.name[1];
-    key += rand();
-    //key *= rand();
-
-    return key%MAX_HASH_KEYS;
-}
 
 int main(int argc, char **argv)
 {
