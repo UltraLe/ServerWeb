@@ -213,29 +213,6 @@ int handleRequest(struct client_info *client)
 
     if(FD_ISSET(client->fd, &readSet)){
 
-
-        //USATO PER TEST RIMUOVERE, cont len 205
-        char *http_header = "HTTP/1.1 200 OK\nVary: Accept-Encoding\nContent-Type: text/html\nAccept-Ranges: bytes\nLast-Modified: Mon, 17 Jul 2017 19:28:15 GMT\nContent-Length: 205\nDate: Sun, 14 Jul 2019 10:44:37 GMT\nServer: lighttpd/1.4.35";
-        char *http_body = "\n\n<!DOCTYPE html>\n"
-                          "<html>\n"
-                          "<body>\n"
-                          "<h1>Hello World !</h1>\n"
-                          "<p></p>\n"
-                          "<h1>Ciao Mondo !</h1>\n"
-                          "<p>(per Giovanni)</p>\n"
-                          "<h1>Bella Fra !</h1>\n"
-                          "<p>(per Riccardo)</p>\n"
-                          "<h1>UuuuoooOOoooo !</h1>\n"
-                          "<p>(per Ezio)</p>\n"
-                          "</body>\n"
-                          "</html>";
-
-        char http[4096];
-        memset(http, 0, 4096);
-        strcat(http, http_header);
-        strcat(http, http_body);
-        //FINE ROBA DA TOGLIERE DOPO IL MERGE
-
         //removing client->fd from readSet  in order to prevent loops
         //if loop is still present, it is a telnet problem, test with httperf
 

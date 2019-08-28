@@ -21,7 +21,15 @@ void acceptAnalyzer(char *request) {
     char accept[200];
     memset(accept, 0, 200);
 
-    char *acceptStart = strstr(request, "Accept:") + 8;
+    char *acceptStart = strstr(request, "Accept:");
+    if(acceptStart == NULL){
+        perror("Not found Accept line");
+        setting.error = true;
+        strcpy(setting.statusCode, BR);
+        return;
+    }
+
+    acceptStart = acceptStart+8;
     strncpy(accept, acceptStart, strstr(acceptStart, "\n") - 1 - acceptStart);
 
     if ((attribute = strstr(accept, "image/png")) != NULL) {
@@ -113,7 +121,14 @@ void resolutionPhone(char *request){
         return;
     }
 
-    char *UAstart = strstr(request, "User-Agent:") +12;
+    char *UAstart = strstr(request, "User-Agent:");
+    if(UAstart == NULL){
+        perror("Not found User-Agents");
+        setting.error = true;
+        strcpy(setting.statusCode, BR);
+        return;
+    }
+    UAstart = UAstart +12;
     strncpy(userAgent,UAstart,strstr(UAstart,"\n")-UAstart);
 
     wurfl_device_handle hdevice = wurfl_lookup_useragent(hwurfl, userAgent);
@@ -166,26 +181,20 @@ char *uriAnalyzer(char *request){
 
     if ((HTTPToken != NULL) && !(strcmp(HTTPToken,"HTTP/1.0") == 0 ||
                             strcmp(HTTPToken,"HTTP/1.1") == 0 ||
-                            strcmp(HTTPToken,"HTTP/2.0")== 0)){
-    //   printf("io sono nell'Uri1");
+                            strcmp(HTTPToken,"HTTP/2.0")== 0)) {
 
         setting.error = true;
         strcpy(setting.statusCode, BR);
         return pathToken;
-
     }
 
 
     if(strcmp(pathToken,"/") == 0) {
-   //     printf("io sono nell'Uri3");
-
         return "";
     }
     else if (strncmp(pathToken,"/",1)==0 && strlen(pathToken)>1){
-  //      printf("io sono nell'Uri");
         return pathToken;
     }
-
     //If you arrive here the request's path is incorrect
     setting.error = true;
     strcpy(setting.statusCode, BR);
@@ -260,13 +269,16 @@ char *parsingManager(char *request) {
 
     } else if (strncmp(path, "/Images/", 7) == 0) {
         resolutionPhone(request);
-        //TODO Inserire funzione resizing
+        if (setting.error) {
+            return sendError();
+        }
 
-       //PROVVISORIO
         acceptAnalyzer(request);
         if (setting.error) {
             return sendError();
         }
+        //TODO Inserire funzione resizing
+
         takeFile(path);
         //strcpy(setting.type,JPEG);//Lo setta riccardo
 
@@ -286,12 +298,10 @@ char *parsingManager(char *request) {
 
     // I set the header
     PARSEHEADER(response,OK,setting.type,setting.payloadSize,ALIVE);
-    printf("Response ready:\n%s\n", response);  //DA TOGLIERE
     setting.headerSize = strlen(response);
 
     //I check if the metod is HEAD
     if(!setting.head){
-        printf("GET method, inserting image\n");
         memcpy(response + setting.headerSize, payloadBuffer, setting.payloadSize );
     }
     return response;
