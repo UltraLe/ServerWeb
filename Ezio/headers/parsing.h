@@ -181,26 +181,20 @@ char *uriAnalyzer(char *request){
 
     if ((HTTPToken != NULL) && !(strcmp(HTTPToken,"HTTP/1.0") == 0 ||
                             strcmp(HTTPToken,"HTTP/1.1") == 0 ||
-                            strcmp(HTTPToken,"HTTP/2.0")== 0)){
-    //   printf("io sono nell'Uri1");
+                            strcmp(HTTPToken,"HTTP/2.0")== 0)) {
 
         setting.error = true;
         strcpy(setting.statusCode, BR);
         return pathToken;
-
     }
 
 
     if(strcmp(pathToken,"/") == 0) {
-   //     printf("io sono nell'Uri3");
-
         return "";
     }
     else if (strncmp(pathToken,"/",1)==0 && strlen(pathToken)>1){
-  //      printf("io sono nell'Uri");
         return pathToken;
     }
-
     //If you arrive here the request's path is incorrect
     setting.error = true;
     strcpy(setting.statusCode, BR);
@@ -304,12 +298,10 @@ char *parsingManager(char *request) {
 
     // I set the header
     PARSEHEADER(response,OK,setting.type,setting.payloadSize,ALIVE);
-    printf("Response ready:\n%s\n", response);  //DA TOGLIERE
     setting.headerSize = strlen(response);
 
     //I check if the metod is HEAD
     if(!setting.head){
-        printf("GET method, inserting image\n");
         memcpy(response + setting.headerSize, payloadBuffer, setting.payloadSize );
     }
     return response;
