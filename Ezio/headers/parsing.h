@@ -21,7 +21,15 @@ void acceptAnalyzer(char *request) {
     char accept[200];
     memset(accept, 0, 200);
 
-    char *acceptStart = strstr(request, "Accept:") + 8;
+    char *acceptStart = strstr(request, "Accept:");
+    if(acceptStart == NULL){
+        perror("Not found Accept line");
+        setting.error = true;
+        strcpy(setting.statusCode, BR);
+        return;
+    }
+
+    acceptStart = acceptStart+8;
     strncpy(accept, acceptStart, strstr(acceptStart, "\n") - 1 - acceptStart);
 
     if ((attribute = strstr(accept, "image/png")) != NULL) {
@@ -113,7 +121,14 @@ void resolutionPhone(char *request){
         return;
     }
 
-    char *UAstart = strstr(request, "User-Agent:") +12;
+    char *UAstart = strstr(request, "User-Agent:");
+    if(UAstart == NULL){
+        perror("Not found User-Agents");
+        setting.error = true;
+        strcpy(setting.statusCode, BR);
+        return;
+    }
+    UAstart = UAstart +12;
     strncpy(userAgent,UAstart,strstr(UAstart,"\n")-UAstart);
 
     wurfl_device_handle hdevice = wurfl_lookup_useragent(hwurfl, userAgent);
@@ -260,13 +275,16 @@ char *parsingManager(char *request) {
 
     } else if (strncmp(path, "/Images/", 7) == 0) {
         resolutionPhone(request);
-        //TODO Inserire funzione resizing
+        if (setting.error) {
+            return sendError();
+        }
 
-       //PROVVISORIO
         acceptAnalyzer(request);
         if (setting.error) {
             return sendError();
         }
+        //TODO Inserire funzione resizing
+
         takeFile(path);
         //strcpy(setting.type,JPEG);//Lo setta riccardo
 
