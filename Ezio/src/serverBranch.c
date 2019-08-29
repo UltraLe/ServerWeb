@@ -395,7 +395,7 @@ int main(int argc, char **argv)
         perror("Error in sem_init (activateCacheManager)");
         exit(-1);
     }
-    if(sem_init(&cacheManagerHasFinished, 1, 0) == -1){
+    if(sem_init(&cacheManagerHasFinished, 1, 1) == -1){
         perror("Error in sem_init (cacheManagerHasFinished)");
         exit(-1);
     }
@@ -469,7 +469,7 @@ int main(int argc, char **argv)
         //resetting readSet
         readSet = allSet;
 
-        printf("\tServer branch with pid %d waiting on the select\n", getpid());
+        //printf("\tServer branch with pid %d waiting on the select\n", getpid());
 
         if((numSetsReady = (select(max_fd + 1, &readSet, NULL, NULL, NULL))) == -1){
 
@@ -484,7 +484,7 @@ int main(int argc, char **argv)
         //TRYING to establish a connection with a client
         while(FD_ISSET(handler_info->listen_fd, &readSet)) {
 
-            printf("\tServer branch wih pid: %d in trywait\n", getpid());
+            //printf("\tServer branch wih pid: %d in trywait\n", getpid());
 
             //acquiring semaphore on the listening socket
             tryWaitRet = sem_trywait(&(handler_info->sem_toListenFd));
@@ -590,7 +590,7 @@ int main(int argc, char **argv)
                     serverIsFull = 1;
                 }
 
-                printf("\tServer branch with pid %d has inserted clients\n", getpid());
+                //printf("\tServer branch with pid %d has inserted clients\n", getpid());
 
                 break;
             }

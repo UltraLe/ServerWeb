@@ -15,57 +15,95 @@ struct image imageToInsert;
 //has been copied from the cache to imageToGet->imageBytes
 int getImageInCache(struct image *imageToGet)
 {
-    printf("getImageInCache from branch %d\n", getpid());
+    //printf("getImageInCache from branch %d\n", getpid());
     
     int key = hashFunction(*imageToGet);
 
-    printf("heash_key generated: %d\n", key);
+    //printf("heash_key generated in getImage: %d\n", key);
 
     struct hash_element *hashElement = (cache + key);
 
-    struct image tempImage;
+    struct image *tempImage;
 
-    printf("hash_element selected\n");
-
-    printf("Counter of the first element of the first image in hash_element selected: %u\n", (cache->conflictingImages)->counter);
-
-    printf("Counter of the first image in hash_element selected: %u\n", (hashElement->conflictingImages)->counter);
+    //printf("2 waiting in semToHashBlock in cache\n");
+    if(sem_wait(&(hashElement->semToHashBlock)) == -1 ){
+        perror("Error in semwait (getImage in cache)");
+        return -1;
+    }
 
     for(int i = 0;i < MAX_IMAGE_NUM_PER_KEY; ++i) {
 
-        tempImage = (hashElement->conflictingImages)[0];
+        tempImage = (hashElement->conflictingImages);
         
-        printf("Looking for image in cache, in %d hash_element and i: %d\n", key, i);
+        //printf("Looking for image in cache, in %d hash_element and i: %d\n", key, i);
 
         //if the counters of a conflictingImages is 0
         //it means that the element is not in cache
-        if (tempImage.counter == 0)
+        if (tempImage->counter == 0) {
+
+            //printf("3 posting in semToHashBlock in cache\n");
+            if(sem_post(&(hashElement->semToHashBlock)) == -1 ){
+                perror("Error in sempost (getImage in cache)");
+                return -1;
+            }
+
             return 0;
+
+        }
+
+        //printf("1\n");
         
-        if(strcmp(tempImage.name, imageToGet->name) != 0)
+        if(strcmp(tempImage->name, imageToGet->name) != 0)
             continue;
 
-        if(tempImage.quality != imageToGet->quality)
+        //printf("2\n");
+
+        if(tempImage->quality != imageToGet->quality)
             continue;
 
-        if(tempImage.width != imageToGet->width)
+        //printf("3\n");
+
+        if(tempImage->width != imageToGet->width)
             continue;
 
-        if(tempImage.height != imageToGet->height)
+        //printf("4\n");
+
+        if(tempImage->height != imageToGet->height)
             continue;
 
-        if(imageToGet->isPng != 2 && tempImage.isPng != imageToGet->isPng)
+        //printf("5\n");
+
+        if(imageToGet->isPng != 2 && tempImage->isPng != imageToGet->isPng)
             continue;
+
+        //printf("6\n");
 
         //here the image has been found
-        memcpy(imageToGet->imageBytes, tempImage.imageBytes, tempImage.imageSize);
-        imageToGet->isPng = tempImage.isPng;
-        imageToGet->imageSize = tempImage.imageSize;
+        tempImage->counter++;
 
-        printf("Found in position %d\n", i);
+        memcpy(imageToGet->imageBytes, tempImage->imageBytes, tempImage->imageSize);
+        imageToGet->isPng = tempImage->isPng;
+        imageToGet->imageSize = tempImage->imageSize;
+
+        //printf("3 posting in semToHashBlock in cache\n");
+        if(sem_post(&(hashElement->semToHashBlock)) == -1 ){
+            perror("Error in sempost (getImage in cache)");
+            return -1;
+        }
+
+        //printf("Found in position %d\n", i);
+        //printf("Its counter is %d\n", tempImage->counter);
+
+
         
         return 1;
 
+    }
+
+    //printf("3 posting in semToHashBlock in cache\n");
+    if(sem_post(&(hashElement->semToHashBlock)) == -1 ){
+        perror("Error in sempost (getImage in cache)");
+        return -1;
     }
 
     //if the function reaches this point it means
@@ -80,9 +118,11 @@ int getImageInCache(struct image *imageToGet)
 //a new image into the cache
 int insert()
 {
-    printf("Branch %d nserting image in cache\n", getpid());
+    //printf("Branch %d inserting image in cache\n", getpid());
 
     int key = hashFunction(imageToInsert);
+    //printf("heash_key generated in insert: %d\n", key);
+
     struct hash_element *hashElement = (cache + key);
 
     struct image *imageSet = hashElement->conflictingImages;
@@ -97,6 +137,7 @@ int insert()
             selectedPosition = (imageSet + j)->counter;
     }
 
+    //printf("5 waiting in semToHashBlock in cache\n");
     if(sem_wait(&(hashElement->semToHashBlock)) == -1 ){
         perror("Error in semwait (insert in cache)");
         return -1;
@@ -104,6 +145,7 @@ int insert()
 
     //the image with the minimum counter has been selected, inserting
     (imageSet + selectedPosition)->counter = 1;
+
     (imageSet + selectedPosition)->imageSize = imageToInsert.imageSize;
     (imageSet + selectedPosition)->width = imageToInsert.width;
     (imageSet + selectedPosition)->height = imageToInsert.height;
@@ -113,8 +155,9 @@ int insert()
     memcpy((imageSet + selectedPosition)->imageBytes, imageToInsert.imageBytes, imageToInsert.imageSize);
     (imageSet + selectedPosition)->imageSize = imageToInsert.imageSize;
 
-    printf("Inserted image in cache, in %d hash_element and i: %d\n", key, selectedPosition);
-    
+    //printf("Inserted image in cache, in %d position and i (in image array): %d\n", key, selectedPosition);
+
+    //printf("6 posting in semToHashBlock in cache\n");
     if(sem_post(&(hashElement->semToHashBlock)) == -1 ){
         perror("Error in semwait (insert in cache)");
         return -1;
@@ -132,15 +175,14 @@ int insert()
 //     this has to be done by a thread parallel to the ServerBranch
 void cacheManager()
 {
-    printf("cacheManager %d ready\n", getpid());
-
     //attaching to the cache
     while(1){
 
-        printf("cacheManager %d waiting the branch\n", getpid());
+        //printf("cacheManager %d waiting the branch\n", getpid());
 
+        //printf("1 waiting in activateCacheManager in cache\n");
         //waiting to insert a new element into the cache
-        if(sem_wait(&activateCacheManager) == 0){
+        if(sem_wait(&activateCacheManager) == -1){
             perror("Error in semwait (activateCacheManager)");
             return;
         }
@@ -150,11 +192,10 @@ void cacheManager()
             return;
         }
 
-        printf("cacheManager %d posting the branch\n", getpid());
-
+        //printf("7 posting in cacheManagerHasFinished in cache\n");
         //posting to insert a new element into the cache
-        if(sem_post(&cacheManagerHasFinished) == 0){
-            perror("Error in sempost (activateCacheManager)");
+        if(sem_post(&cacheManagerHasFinished) == -1){
+            perror("Error in sempost (cacheManagerHasFinished)");
             return;
         }
     }

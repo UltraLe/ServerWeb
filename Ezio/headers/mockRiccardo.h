@@ -8,7 +8,7 @@ int imageMagikMock(char *imagePath)
 
     int im_fd;
 
-    printf("Path nella mock: %s\n", imagePath);
+    //printf("Path nella mock: %s\n", imagePath);
 
     //giovanni gay
 

@@ -309,6 +309,11 @@ char *parsingManager(char *request) {
             return sendError();
         }
 
+        //waiting that the cacheManager has finished to insert
+        //the previous imageToInsert
+        if(sem_wait(&cacheManagerHasFinished) == -1)
+            perror("Error in semwait (activateCacheManager)");
+
         strcpy(imageToInsert.name, path+8);
         
         imageToInsert.quality = ((int)setting.quality*10)%10;
@@ -340,10 +345,18 @@ char *parsingManager(char *request) {
             //TODO Inserire funzione resizing
             //TODO Gestire tutti gli errori
             //TODO Settare imageToInsert type e size ......
+            
+            if(sem_post(&activateCacheManager) == -1)
+                perror("Error in sempost (activateCacheManager)");
 
             //TODO Salvare immagine ritornata in cache
             //TODO Elaborare risposta
         }
+
+        //posting to insert a new element into the cache
+        if(sem_post(&cacheManagerHasFinished) == -1)
+            perror("Error in sempost (cacheManagerHasFinished in parsing)");
+        
         setting.payloadSize = imageToInsert.imageSize;
 
         if (imageToInsert.isPng == 0){
