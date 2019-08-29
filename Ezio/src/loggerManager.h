@@ -103,19 +103,20 @@ int logToString(struct log currentLog)
     return 0;
 }
 
-
+char ACTUAL_LOG_FILENAME[MAX_LOG_FILENAME_LEN];
+int numFileLogs;
 
 int writeLogsOnDisk()
 {
     int fd;
-    off_t currentOffset;
+    int currentOffset;
 
-    if((fd = open(LOG_FILENAME, O_RDWR|O_APPEND|O_CREAT, 0666)) == -1){
+    if((fd = open(ACTUAL_LOG_FILENAME, O_RDWR|O_APPEND|O_CREAT, 0666)) == -1){
         perror("Error in open (loggerManager)");
         return -1;
     }
 
-    currentOffset = lseek(fd, SEEK_END, 0);
+    currentOffset = lseek(fd, 0, SEEK_END);
 
     if(currentOffset == (off_t)-1){
         perror("Error on lseek");
@@ -129,6 +130,23 @@ int writeLogsOnDisk()
     }
 
     close(fd);
+
+    if(currentOffset > MAX_LOG_FILE_BYTE){
+
+        numFileLogs = (numFileLogs+1)%MAX_FILE_LOGS;
+        sprintf(ACTUAL_LOG_FILENAME, "%s-%d", LOG_FILENAME, numFileLogs);
+        sprintf(ACTUAL_LOG_FILENAME+strlen(ACTUAL_LOG_FILENAME), ".txt");
+
+        //if the file already exists, it is old, remove it
+        FILE *f;
+        if((f = fopen(ACTUAL_LOG_FILENAME, "r")) != NULL){
+            fclose(f);
+            if(remove(ACTUAL_LOG_FILENAME) == -1)
+                perror("Error to remove the file log");
+        }
+
+
+    }
 
     return 0;
 
@@ -257,6 +275,10 @@ void loggerManager()
     timeLenTemplate = strlen("[Sat Aug 10 15:58:24 2019]->");
     cliLenTemplate = strlen("[000.000.000.000:00000]->");
     sortedLogsStringSize = loggerToWait*MAX_LOGS_PER_BRANCH*(MAX_LOG_LEN+cliLenTemplate+timeLenTemplate);
+
+    memcpy(ACTUAL_LOG_FILENAME, LOG_FILENAME, strlen(LOG_FILENAME));
+    sprintf(ACTUAL_LOG_FILENAME+strlen(ACTUAL_LOG_FILENAME), "-0.txt");
+    numFileLogs = 0;
 
     do{
 

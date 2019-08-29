@@ -20,6 +20,12 @@
 #define WRITE_ON_DISK_TIMER_SEC 5                //time after which logs of each server branch will
                                                  //be copied on disk
 
+#define MAX_LOG_FILE_BYTE 1000000              //each log file will have a maximum number of bytes
+
+#define MAX_LOG_FILENAME_LEN 20
+
+#define MAX_FILE_LOGS 2
+
 #define MAX_LOG_LEN 50
 
 #define CLIENT_ACCEPTED_S "Connection established\n"
@@ -34,7 +40,7 @@
 
 #define CLIENT_MERGED_S "Client has been transfered to another server branch\n"
 
-#define LOG_FILENAME "serverLog.txt"
+#define LOG_FILENAME "serverLog"
 
 struct log{
     time_t log_time;
