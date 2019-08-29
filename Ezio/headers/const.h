@@ -93,8 +93,6 @@ struct handler_info{
 
     sem_t sem_loggerManagerHasFinished;     //semaphore used by the loggerManager to tell loggers that their
                                             //information has been taken
-
-    wurfl_handle hwurfl;
 };
 
 struct branch_handler_communication{

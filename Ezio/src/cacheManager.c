@@ -18,6 +18,9 @@ int getImageInCache(struct image *imageToGet)
     printf("getImageInCache from branch %d\n", getpid());
     
     int key = hashFunction(*imageToGet);
+
+    //printf("getImageInCache from branch %d\n", getpid());
+
     struct hash_element *hashElement = (cache + key);
 
     struct image tempImage;

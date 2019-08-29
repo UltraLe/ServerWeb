@@ -133,7 +133,6 @@ void acceptAnalyzer(char *request) {
 
 void resolutionPhone(char *request){
     char userAgent[300];
-    wurfl_error error;
 
     char *UAstart = strstr(request, "User-Agent:");
     if(UAstart == NULL){
@@ -145,15 +144,17 @@ void resolutionPhone(char *request){
     UAstart = UAstart +12;
     strncpy(userAgent,UAstart,strstr(UAstart,"\n")-UAstart);
 
-    wurfl_device_handle hdevice = wurfl_lookup_useragent(handler_info->hwurfl, userAgent);
+    wurfl_device_handle hdevice = wurfl_lookup_useragent(hwurfl, userAgent);
+
     if (hdevice) {
         // DEVICE FOUND
         setting.width = atoi(wurfl_device_get_capability(hdevice, "resolution_width"));
         setting.height = atoi(wurfl_device_get_capability(hdevice, "resolution_height"));
 
     wurfl_device_destroy(hdevice);
+    }
 
-}}
+}
 
 char *takeFile(char *path){
 
@@ -245,9 +246,6 @@ char *parsingManager(char *request) {
 
     memset(data, 0, sizeof(data));
 
-    printf("In parsingManager from pid:%d\n", getpid()); //DA TOGLIERE
-
-
     //Check that the method is acceptable
     if (strncmp(request, "GET ", 4) == 0) {
         //Going over the if
@@ -279,9 +277,6 @@ char *parsingManager(char *request) {
         return sendError();
     }
 
-    printf("before comparing '': %d\n", getpid());
-    sleep(3);
-
     //home page requested
     if (strcmp(path, "") == 0) {
         strcpy(setting.type, TEXT);
@@ -304,8 +299,6 @@ char *parsingManager(char *request) {
 
     } else if (strncmp(path, "/Images/", 7) == 0) {
 
-        
-
         resolutionPhone(request);
         if (setting.error) {
             return sendError();
@@ -315,14 +308,10 @@ char *parsingManager(char *request) {
         if (setting.error) {
             return sendError();
         }
-        printf("after accept from pid: %d\n", getpid());
-        sleep(3);
 
         strcpy(imageToInsert.name, path+8);
         
         imageToInsert.quality = ((int)setting.quality*10)%10;
-        printf("IMageToInsert quality: %d\n", imageToInsert.quality);
-        sleep(3);
 
         imageToInsert.width = setting.width;
         imageToInsert.height = setting.height;
@@ -337,12 +326,7 @@ char *parsingManager(char *request) {
             imageToInsert.isPng = 2;
         }
 
-        printf("before getImageInCache from pid: %d\n", getpid());
-        sleep(3);
-
         int cacheReturn = getImageInCache(&imageToInsert);
-
-        printf("after getImageInCache from pid: %d\n", getpid());
         
         if ( cacheReturn == 0){
 

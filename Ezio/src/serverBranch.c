@@ -39,6 +39,7 @@ sem_t cacheManagerHasFinished;
 
 #include "cacheManager.c"
 
+wurfl_handle hwurfl;
 #include "parsing.h"
 
 #include "checkClientPercentage.h"
@@ -416,6 +417,19 @@ int main(int argc, char **argv)
     //opening the home_page
     if(loadHomePage() == -1){
         perror("Error in reading home_page");
+        exit(-1);
+    }
+
+    //initializing wurfl
+    hwurfl = wurfl_create();
+
+    if(wurfl_set_root(hwurfl, WURFL_PATH) != WURFL_OK){
+        perror("Error in wurfl_set_root");
+        exit(-1);
+    }
+
+    if(wurfl_load(hwurfl) != WURFL_OK){
+        perror("Error in wurfl_load");
         exit(-1);
     }
 
