@@ -380,6 +380,11 @@ int main(int argc, char **argv) {
         exit(-1);
     }
 
+    if(wurfl_load(info->hwurfl) != WURFL_OK){
+        perror("Error in wurfl_load");
+        exit(-1);
+    }
+
     //when the number of the active clients of a branch get to the 10%, 50% and 80%
     //of MAX_CLI_PER_SB, it signals the creator with SIGUSR1.
     //The branches handler will decide whether merge or create branches.
