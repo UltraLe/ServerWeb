@@ -259,7 +259,7 @@ int handleRequest(struct client_info *client)
 
 
 
-            printf("\t\tIn serverBranch, all the packet is:\n%s\n", response); //da levare
+            //printf("\t\tIn serverBranch, all the packet is:\n%s\n", response); //da levare
 
             if(write(client->fd, response, setting.payloadSize + setting.headerSize) < 0){
                 perror("Error in writen (unable to reply): ");
@@ -455,7 +455,7 @@ int main(int argc, char **argv)
         //resetting readSet
         readSet = allSet;
 
-        //printf("\tServer branch with pid %d waiting on the select\n", getpid());
+        printf("\tServer branch with pid %d waiting on the select\n", getpid());
 
         if((numSetsReady = (select(max_fd + 1, &readSet, NULL, NULL, NULL))) == -1){
 
@@ -470,7 +470,7 @@ int main(int argc, char **argv)
         //TRYING to establish a connection with a client
         while(FD_ISSET(handler_info->listen_fd, &readSet)) {
 
-            //printf("\tServer branch wih pid: %d in trywait\n", getpid());
+            printf("\tServer branch wih pid: %d in trywait\n", getpid());
 
             //acquiring semaphore on the listening socket
             tryWaitRet = sem_trywait(&(handler_info->sem_toListenFd));
@@ -576,7 +576,7 @@ int main(int argc, char **argv)
                     serverIsFull = 1;
                 }
 
-                //printf("\tServer branch with pid %d has inserted clients\n", getpid());
+                printf("\tServer branch with pid %d has inserted clients\n", getpid());
 
                 break;
             }

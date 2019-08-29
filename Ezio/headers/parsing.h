@@ -129,6 +129,8 @@ void acceptAnalyzer(char *request) {
     }
 }
 
+
+
 void resolutionPhone(char *request){
     char userAgent[300];
     wurfl_error error;
@@ -154,9 +156,8 @@ void resolutionPhone(char *request){
 }}
 
 char *takeFile(char *path){
-    int im_fd;
 
-    printf("Path: %s\n",path+1);
+    int im_fd;
 
     if((im_fd = open(path+1, O_RDONLY)) == -1){
         perror("file not Found");
@@ -213,6 +214,8 @@ char *uriAnalyzer(char *request){
 
 }
 
+
+
 char *sendError(){
     char header[200];
     char data[400];
@@ -228,6 +231,13 @@ char *sendError(){
     return NULL ;
 
 }
+
+
+
+#include "mockRiccardo.h"
+
+
+
 char *parsingManager(char *request) {
 
     char path[2048];
@@ -235,7 +245,8 @@ char *parsingManager(char *request) {
 
     memset(data, 0, sizeof(data));
 
-    printf("In parsingManager:\n%s\n", request); //DA TOGLIERE
+    printf("In parsingManager from pid:%d\n", getpid()); //DA TOGLIERE
+
 
     //Check that the method is acceptable
     if (strncmp(request, "GET ", 4) == 0) {
@@ -268,6 +279,9 @@ char *parsingManager(char *request) {
         return sendError();
     }
 
+    printf("before comparing '': %d\n", getpid());
+    sleep(3);
+
     //home page requested
     if (strcmp(path, "") == 0) {
         strcpy(setting.type, TEXT);
@@ -290,6 +304,8 @@ char *parsingManager(char *request) {
 
     } else if (strncmp(path, "/Images/", 7) == 0) {
 
+        
+
         resolutionPhone(request);
         if (setting.error) {
             return sendError();
@@ -299,11 +315,14 @@ char *parsingManager(char *request) {
         if (setting.error) {
             return sendError();
         }
+        printf("after accept from pid: %d\n", getpid());
+        sleep(3);
 
         strcpy(imageToInsert.name, path+8);
-
+        
         imageToInsert.quality = ((int)setting.quality*10)%10;
         printf("IMageToInsert quality: %d\n", imageToInsert.quality);
+        sleep(3);
 
         imageToInsert.width = setting.width;
         imageToInsert.height = setting.height;
@@ -318,9 +337,21 @@ char *parsingManager(char *request) {
             imageToInsert.isPng = 2;
         }
 
-        if (getImageInCache(&imageToInsert) == 0){
+        printf("before getImageInCache from pid: %d\n", getpid());
+        sleep(3);
 
-            takeFile(path);
+        int cacheReturn = getImageInCache(&imageToInsert);
+
+        printf("after getImageInCache from pid: %d\n", getpid());
+        
+        if ( cacheReturn == 0){
+
+            //takeFile(path);
+
+            if(imageMagikMock(path) == -1){
+                perror("Error in imageMafikMock");
+                return sendError();
+            }
 
             //TODO Inserire funzione resizing
             //TODO Gestire tutti gli errori

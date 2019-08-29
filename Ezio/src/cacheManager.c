@@ -15,6 +15,8 @@ struct image imageToInsert;
 //has been copied from the cache to imageToGet->imageBytes
 int getImageInCache(struct image *imageToGet)
 {
+    printf("getImageInCache from branch %d\n", getpid());
+    
     int key = hashFunction(*imageToGet);
     struct hash_element *hashElement = (cache + key);
 
@@ -51,7 +53,7 @@ int getImageInCache(struct image *imageToGet)
         imageToGet->isPng = tempImage.isPng;
         imageToGet->imageSize = tempImage.imageSize;
 
-        printf("Found in positino %d\n", i);
+        printf("Found in position %d\n", i);
         
         return 1;
 
@@ -69,6 +71,8 @@ int getImageInCache(struct image *imageToGet)
 //a new image into the cache
 int insert()
 {
+    printf("Branch %d nserting image in cache\n", getpid());
+
     int key = hashFunction(imageToInsert);
     struct hash_element *hashElement = (cache + key);
 
@@ -119,8 +123,12 @@ int insert()
 //     this has to be done by a thread parallel to the ServerBranch
 void cacheManager()
 {
+    printf("cacheManager %d ready\n", getpid());
+
     //attaching to the cache
     while(1){
+
+        printf("cacheManager %d waiting the branch\n", getpid());
 
         //waiting to insert a new element into the cache
         if(sem_wait(&activateCacheManager) == 0){
@@ -128,10 +136,12 @@ void cacheManager()
             return;
         }
 
-        if(insert(imageToInsert)){
+        if(insert()){
             perror("Error insert");
             return;
         }
+
+        printf("cacheManager %d posting the branch\n", getpid());
 
         //posting to insert a new element into the cache
         if(sem_post(&cacheManagerHasFinished) == 0){
