@@ -26,6 +26,7 @@
 #include <semaphore.h>
 
 #include <pthread.h>
+
 #include <wurfl/wurfl.h>
 
 #include "cacheConst.h"

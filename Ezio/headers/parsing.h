@@ -1,7 +1,7 @@
 //
 // Created by ezio on 16/07/19.
 //
-#include <wurfl/wurfl.h>
+
 #include <stdbool.h>
 #include <fcntl.h>
 #include "parsingConst.h"
@@ -123,7 +123,7 @@ void resolutionPhone(char *request){
 
     wurfl_device_destroy(hdevice);
 
-}}//LEVARE
+}}
 
 char *takeFile(char *path){
     int im_fd;

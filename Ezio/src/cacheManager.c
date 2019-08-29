@@ -2,6 +2,7 @@
 // Created by ezio on 28/08/19.
 //
 
+#include"hashFunction.h"
 
 struct image imageToInsert;
 
@@ -61,7 +62,7 @@ int getImageInCache(struct image *imageToGet)
 //a new image into the cache
 int insert()
 {
-    int key = hash_function(imageToInsert);
+    int key = hashFunction(imageToInsert);
     struct hash_element *hashElement = (cache + key);
 
     struct image *imageSet = hashElement->conflictingImages;
