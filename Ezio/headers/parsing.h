@@ -105,22 +105,6 @@ void resolutionPhone(char *request){
     char userAgent[300];
     wurfl_error error;
 
-    wurfl_handle hwurfl = wurfl_create();
-
-    // Define wurfl db
-    error = wurfl_set_root(hwurfl, "/usr/share/wurfl/wurfl.zip");
-    if (error != WURFL_OK) {
-        printf("%s\n", wurfl_get_error_message(hwurfl));
-        return;
-    }
-
-    // Loads wurfl db into memory
-    error = wurfl_load(hwurfl);
-    if (error != WURFL_OK) {
-        printf("%s\n", wurfl_get_error_message(hwurfl));
-        return;
-    }
-
     char *UAstart = strstr(request, "User-Agent:");
     if(UAstart == NULL){
         perror("Not found User-Agents");
@@ -131,14 +115,13 @@ void resolutionPhone(char *request){
     UAstart = UAstart +12;
     strncpy(userAgent,UAstart,strstr(UAstart,"\n")-UAstart);
 
-    wurfl_device_handle hdevice = wurfl_lookup_useragent(hwurfl, userAgent);
+    wurfl_device_handle hdevice = wurfl_lookup_useragent(handler_info->hwurfl, userAgent);
     if (hdevice) {
         // DEVICE FOUND
         setting.width = atoi(wurfl_device_get_capability(hdevice, "resolution_width"));
         setting.height = atoi(wurfl_device_get_capability(hdevice, "resolution_height"));
 
     wurfl_device_destroy(hdevice);
-    wurfl_destroy(hwurfl);
 
 }}
 
