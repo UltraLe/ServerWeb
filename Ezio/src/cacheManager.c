@@ -23,14 +23,16 @@ int getImageInCache(struct image *imageToGet)
     for(int i = 0;i < MAX_IMAGE_NUM_PER_KEY; ++i) {
 
         tempImage = (hashElement->conflictingImages[0]);
+        
+        printf("Looking for image in cache, in %d hash_element and i: %d\n", key, i);
 
         //if the counters of a conflictingImages is 0
         //it means that the element is not in cache
-        if(strcmp(tempImage.name, imageToGet->name) != 0)
-            continue;
-        
         if (tempImage.counter == 0)
             return 0;
+        
+        if(strcmp(tempImage.name, imageToGet->name) != 0)
+            continue;
 
         if(tempImage.quality != imageToGet->quality)
             continue;
@@ -46,6 +48,11 @@ int getImageInCache(struct image *imageToGet)
 
         //here the image has been found
         memcpy(imageToGet->imageBytes, tempImage.imageBytes, tempImage.imageSize);
+        imageToGet->isPng = tempImage.isPng;
+        imageToGet->imageSize = tempImage.imageSize;
+
+        printf("Found in positino %d\n", i);
+        
         return 1;
 
     }
@@ -93,6 +100,8 @@ int insert()
     memcpy((imageSet + selectedPosition)->imageBytes, imageToInsert.imageBytes, imageToInsert.imageSize);
     (imageSet + selectedPosition)->imageSize = imageToInsert.imageSize;
 
+    printf("Inserted image in cache, in %d hash_element and i: %d\n", key, selectedPosition);
+    
     if(sem_post(&(hashElement->semToHashBlock)) == -1 ){
         perror("Error in semwait (insert in cache)");
         return -1;

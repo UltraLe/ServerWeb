@@ -252,10 +252,6 @@ int handleRequest(struct client_info *client)
             //setting the values to the struct that will be used into the cache
             memset(&imageToInsert, 0, sizeof(imageToInsert));
 
-            imageToInsert.height = setting.height;
-            imageToInsert.width = setting.width;
-            imageToInsert.quality = ((int)(setting.quality*10))%10;
-
             //pharsing HTTP request
             parsingManager(readBuffer);
 
