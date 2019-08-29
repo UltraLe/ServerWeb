@@ -26,6 +26,9 @@ int getImageInCache(struct image *imageToGet)
 
         //if the counters of a conflictingImages is 0
         //it means that the element is not in cache
+        if(strcmp(tempImage.name, imageToGet->name) != 0)
+            continue;
+        
         if (tempImage.counter == 0)
             return 0;
 
@@ -39,9 +42,6 @@ int getImageInCache(struct image *imageToGet)
             continue;
 
         if(imageToGet->isPng != 2 && tempImage.isPng != imageToGet->isPng)
-            continue;
-
-        if(strcmp(tempImage.name, imageToGet->name) != 0)
             continue;
 
         //here the image has been found

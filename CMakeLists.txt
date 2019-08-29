@@ -11,6 +11,7 @@ target_link_libraries(ServerBranch wurfl)
 
 add_executable(ServerBranchesHandler Ezio/src/serverBranchesHandler.c)
 target_link_libraries(ServerBranchesHandler pthread)
+target_link_libraries(ServerBranchesHandler wurfl)
 
 #used to test the hash function
 add_executable(HashTester Ezio/src/hashFunctionTester.c)

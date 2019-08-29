@@ -12,6 +12,8 @@
 #define ISE  "500 Internal Server Error"
 #define VNS  "505 HTTP Version Not Supported"
 
+#define home_page_path "/sito/WebPage.html"
+
 #define TEXT "Content-Type: text/html\n"
 #define JPEG "Content-Type: image/jpeg\n"
 #define PNG "Content-Type: image/png\n"

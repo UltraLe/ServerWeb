@@ -229,7 +229,7 @@ int merge_branches(int pid_clientReciver, struct branch_handler_communication *r
 
 
 int main(int argc, char **argv) {
-    int id_info, id_hb;
+    int id_info, id_hb, id_cache;
     pid_t my_pid;
     sem_t sem_tolistenfd, sem_trasfclients, sem_sendrecive, sem_awakeloggermanager;
     sem_t sem_loggermanagerfinished;
@@ -240,7 +240,7 @@ int main(int argc, char **argv) {
     struct hash_element *cache;
 
     //initializing cache address
-    if (shmget(IPC_CACHE_KEY, CACHE_BYTES, IPC_CREAT|0666) == -1) {
+    if ((id_cache  = shmget(IPC_CACHE_KEY, CACHE_BYTES, IPC_CREAT|0666)) == -1) {
         perror("Error in shmget (cache): ");
         exit(-1);
     }
@@ -272,7 +272,7 @@ int main(int argc, char **argv) {
         exit(-1);
     }
 
-    if ((cache = shmat(id_info, NULL, SHM_R | SHM_W)) == (void *) -1) {
+    if ((cache = shmat(id_cache, NULL, SHM_R | SHM_W)) == (void *) -1) {
         perror("Error in shmat");
         exit(-1);
     }

@@ -11,6 +11,35 @@ char *response;
 struct paramResponse setting;
 char *payloadBuffer;
 
+char *homeHTML;
+int homePageBytes;
+
+int loadHomePage()
+{
+    int im_fd;
+
+    if((im_fd = open(home_page_path, O_RDONLY)) == -1){
+        perror("Home pahe not Found");
+        setting.error = true;
+        strcpy(setting.statusCode, ISE);
+        return -1;
+    }
+
+    int image_byte = lseek(im_fd, 0, SEEK_END);
+    homeHTML = (char *)malloc(image_byte);
+
+    lseek(im_fd, 0, SEEK_SET);
+
+    if((homePageBytes = read(im_fd, payloadBuffer, image_byte)) == -1){
+        perror("Error in reading the home page");
+        setting.error = true;
+        strcpy(setting.statusCode, ISE);
+        return -1;
+    }
+
+    return 0;
+}
+
 void acceptAnalyzer(char *request) {
     setting.quality = -1;
     char *attribute;

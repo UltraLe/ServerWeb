@@ -37,9 +37,9 @@ struct hash_element *cache;
 sem_t activateCacheManager;
 sem_t cacheManagerHasFinished;
 
-#include "parsing.h"
-
 #include "cacheManager.c"
+
+#include "parsing.h"
 
 #include "checkClientPercentage.h"
 
@@ -249,15 +249,18 @@ int handleRequest(struct client_info *client)
             //Updating client's last time active
             client->last_time_active = time(0);
 
+            //setting the values to the struct that will be used into the cache
+            memset(&imageToInsert, 0, sizeof(imageToInsert));
+
+            imageToInsert.height = setting.height;
+            imageToInsert.width = setting.width;
+            imageToInsert.quality = ((int)(setting.quality*10))%10;
+
             //pharsing HTTP request
             parsingManager(readBuffer);
 
             //TODO move into parsingManager
-            //setting the values to the struct that will be used into the cache
-            memset(&imageToInsert, 0, sizeof(imageToInsert));
-            imageToInsert.height = setting.height;
-            imageToInsert.width = setting.width;
-            imageToInsert.quality = ((int)(setting.quality*10))%10;
+
 
 
             printf("\t\tIn serverBranch, all the packet is:\n%s\n", response); //da levare
@@ -414,6 +417,11 @@ int main(int argc, char **argv)
         exit(-1);
     }
 
+    //opening the home_page
+    if(loadHomePage() == -1){
+        perror("Error in reading home_page");
+        exit(-1);
+    }
 
     ///here starts the main body of the server branch
     int connect_fd, tryWaitRet;
