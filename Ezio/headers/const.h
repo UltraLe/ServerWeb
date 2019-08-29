@@ -26,6 +26,7 @@
 #include <semaphore.h>
 
 #include <pthread.h>
+#include <wurfl/wurfl.h>
 
 #include "cacheConst.h"
 
@@ -77,6 +78,8 @@
 
 #include "loggingConst.h"
 
+#define WURFL_PATH "/usr/share/wurfl/wurfl.zip"
+
 char *socket_path = "\0hidden"; //strings that identifies the AF_UNIX socket
 
 struct handler_info{
@@ -89,6 +92,8 @@ struct handler_info{
 
     sem_t sem_loggerManagerHasFinished;     //semaphore used by the loggerManager to tell loggers that their
                                             //information has been taken
+
+    wurfl_handle hwurfl;
 };
 
 struct branch_handler_communication{

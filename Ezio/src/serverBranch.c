@@ -11,8 +11,6 @@
 #include <asm/errno.h>
 #include "writen.h"
 
-#include "parsing.h"
-
 #define READ_BUFFER_BYTE 4096
 
 struct client_list{
@@ -38,6 +36,8 @@ int numSetsReady = 0, max_fd;
 struct hash_element *cache;
 sem_t activateCacheManager;
 sem_t cacheManagerHasFinished;
+
+#include "parsing.h"
 
 #include "cacheManager.c"
 
