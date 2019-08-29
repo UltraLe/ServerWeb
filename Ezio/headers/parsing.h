@@ -123,7 +123,7 @@ void resolutionPhone(char *request){
 
     wurfl_device_destroy(hdevice);
 
-}}
+}}//LEVARE
 
 char *takeFile(char *path){
     int im_fd;
