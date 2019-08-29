@@ -9,7 +9,6 @@
 
 char *response;
 struct paramResponse setting;
-char *payloadBuffer;
 
 char *homeHTML;
 int homePageBytes;
@@ -30,7 +29,7 @@ int loadHomePage()
 
     lseek(im_fd, 0, SEEK_SET);
 
-    if((homePageBytes = read(im_fd, payloadBuffer, image_byte)) == -1){
+    if((homePageBytes = read(im_fd, homeHTML, image_byte)) == -1){
         perror("Error in reading the home page");
         setting.error = true;
         strcpy(setting.statusCode, ISE);
@@ -167,11 +166,10 @@ char *takeFile(char *path){
     }
 
     int image_byte = lseek(im_fd, 0, SEEK_END);
-    payloadBuffer = (char *)malloc(image_byte);
 
     lseek(im_fd, 0, SEEK_SET);
 
-    if((setting.payloadSize = read(im_fd, payloadBuffer, image_byte)) == -1){
+    if((setting.payloadSize = read(im_fd, imageToInsert.imageBytes , image_byte)) == -1){
         perror("Error in reading the image");
         setting.error = true;
         strcpy(setting.statusCode, ISE );
@@ -273,13 +271,25 @@ char *parsingManager(char *request) {
     //home page requested
     if (strcmp(path, "") == 0) {
         strcpy(setting.type, TEXT);
-        takeFile("/sito/WebPage.html");
+        setting.payloadSize = homePageBytes;
+        int responseSize = sizeof(char)*setting.payloadSize+300;
 
-    } else if (strncmp(path, "/sito", 5) == 0) {
-        strcpy(setting.type, PNG);
-        takeFile(path);
+        response = (char *)malloc(responseSize);
+        memset(response, 0, responseSize);
+
+        // I set the header
+        PARSEHEADER(response,OK,setting.type,setting.payloadSize,ALIVE);
+        setting.headerSize = strlen(response);
+
+        //I check if the metod is HEAD
+        if(!setting.head){
+            memcpy(response + setting.headerSize, homeHTML, setting.payloadSize );
+        }
+        return response;
+
 
     } else if (strncmp(path, "/Images/", 7) == 0) {
+
         resolutionPhone(request);
         if (setting.error) {
             return sendError();
@@ -289,10 +299,44 @@ char *parsingManager(char *request) {
         if (setting.error) {
             return sendError();
         }
-        //TODO Inserire funzione resizing
 
-        takeFile(path);
-        //strcpy(setting.type,JPEG);//Lo setta riccardo
+        strcpy(imageToInsert.name, path+8);
+
+        imageToInsert.quality = ((int)setting.quality*10)%10;
+        printf("IMageToInsert quality: %d\n", imageToInsert.quality);
+
+        imageToInsert.width = setting.width;
+        imageToInsert.height = setting.height;
+
+        if (strcmp(setting.type, JPEG) == 0){
+            imageToInsert.isPng = 0;
+        }
+        else if (strcmp(setting.type, PNG) == 0){
+            imageToInsert.isPng = 1;
+        }
+        else if (strcmp(setting.type, NOTHING) == 0){
+            imageToInsert.isPng = 2;
+        }
+
+        if (getImageInCache(&imageToInsert) == 0){
+
+            takeFile(path);
+
+            //TODO Inserire funzione resizing
+            //TODO Gestire tutti gli errori
+            //TODO Settare imageToInsert type e size ......
+
+            //TODO Salvare immagine ritornata in cache
+            //TODO Elaborare risposta
+        }
+        setting.payloadSize = imageToInsert.imageSize;
+
+        if (imageToInsert.isPng == 0){
+            strcpy(setting.type, JPEG);
+        }
+        else {
+            strcpy(setting.type, PNG);
+        }
 
     } else {
         setting.error = true;
@@ -314,7 +358,7 @@ char *parsingManager(char *request) {
 
     //I check if the metod is HEAD
     if(!setting.head){
-        memcpy(response + setting.headerSize, payloadBuffer, setting.payloadSize );
+        memcpy(response + setting.headerSize, imageToInsert.imageBytes, setting.payloadSize );
     }
     return response;
 }
