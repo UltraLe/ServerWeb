@@ -10,6 +10,8 @@ int imageMagikMock(char *imagePath)
 
     printf("Path nella mock: %s\n", imagePath);
 
+    //giovanni gay
+
     if((im_fd = open(imagePath+1, O_RDONLY)) == -1){
         perror("file not Found");
         setting.error = true;
@@ -27,11 +29,11 @@ int imageMagikMock(char *imagePath)
         strcpy(setting.statusCode, ISE );
         return -1;
     }
-    
+
     imageToInsert.imageSize = setting.payloadSize;
-    
+
     if(imageToInsert.isPng == 2)
         imageToInsert.isPng = rand()%1;
-    
+
     return 0;
 }
