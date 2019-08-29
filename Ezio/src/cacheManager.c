@@ -19,15 +19,21 @@ int getImageInCache(struct image *imageToGet)
     
     int key = hashFunction(*imageToGet);
 
-    //printf("getImageInCache from branch %d\n", getpid());
+    printf("heash_key generated: %d\n", key);
 
     struct hash_element *hashElement = (cache + key);
 
     struct image tempImage;
 
+    printf("hash_element selected\n");
+
+    printf("Counter of the first element of the first image in hash_element selected: %u\n", (cache->conflictingImages)->counter);
+
+    printf("Counter of the first image in hash_element selected: %u\n", (hashElement->conflictingImages)->counter);
+
     for(int i = 0;i < MAX_IMAGE_NUM_PER_KEY; ++i) {
 
-        tempImage = (hashElement->conflictingImages[0]);
+        tempImage = (hashElement->conflictingImages)[0];
         
         printf("Looking for image in cache, in %d hash_element and i: %d\n", key, i);
 

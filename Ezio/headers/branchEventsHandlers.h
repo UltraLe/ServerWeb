@@ -177,6 +177,9 @@ void send_clients()
         perror("Error in close listening unix socket (send_clients)");
         exit(-1);
     }
+    
+    //destroying wurfl
+    wurfl_destroy(hwurfl);
 
     //branches dies
     exit(0);

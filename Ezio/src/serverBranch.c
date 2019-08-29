@@ -352,12 +352,12 @@ int main(int argc, char **argv)
 
     //attaching to cache
     int id_cache;
-    if((id_cache = shmget(IPC_HNDLR_INFO_KEY, sizeof(struct handler_info), 0666)) == -1){
-        perror("Error in shmget (getting handler_info structure): ");
+    if((id_cache = shmget(IPC_CACHE_KEY, sizeof(struct handler_info), 0666)) == -1){
+        perror("Error in shmget (getting cache): ");
         exit(-1);
     }
-    if((cache = shmat(id_handlerInfo, NULL, SHM_R|SHM_W)) == (void *)-1){
-        perror("Error in shmat (attaching to handler_info struct): ");
+    if((cache = shmat(id_cache, NULL, SHM_R|SHM_W)) == (void *)-1){
+        perror("Error in shmat (attaching to cache): ");
         exit(-1);
     }
 
