@@ -23,6 +23,8 @@ struct handler_info *handler_info;
 struct client_list *firstConnectedClient;
 struct client_list *lastConnectedClient;
 
+struct sockaddr_in serverAddr;
+
 sem_t *sem_cli;
 int *shouldRecive;
 int *actual_clients;
@@ -39,9 +41,6 @@ sem_t cacheManagerHasFinished;
 
 #include "cacheManager.c"
 
-wurfl_handle hwurfl;
-#include "parsing.h"
-
 #include "checkClientPercentage.h"
 
 //local logs used by each server branch
@@ -51,6 +50,10 @@ sem_t sem_on_logs;
 struct log *loggerLogs;
 
 #include "logger.h"
+
+wurfl_handle hwurfl;
+#include "parsing.h"
+
 
 
 //functions that insert a new client into the connected client list
@@ -111,7 +114,7 @@ int insert_new_client(int connect_fd, struct sockaddr_in clientAddress)
     }
 
     //updating log
-    if(LOG(CLIENT_ACCEPTED, clientAddress) == -1)
+    if(LOG(CLIENT_ACCEPTED, clientAddress, NULL) == -1)
         printf("Error in LOG (client accepted)\n");
 
     if(abs(*(actual_clients)-lastClientNumWhenChecked) >= CHECK_PERC_EACH)
@@ -186,7 +189,7 @@ int remove_client(struct client_info client)
             if(abs(*(actual_clients)-lastClientNumWhenChecked) >= CHECK_PERC_EACH)
                 checkClientPercentage();
 
-            if(LOG(CLIENT_REMOVED, client.client_addr) == -1)
+            if(LOG(CLIENT_REMOVED, client.client_addr, NULL) == -1)
                 printf("Error in LOG (client removed)\n");
 
             //printf("\tServer branch with pid %d client removed\n", getpid());
@@ -238,7 +241,7 @@ int handleRequest(struct client_info *client)
         }else if(numByteRead == -1) {
             perror("Error in read client information: ");
 
-            if(LOG(CLIENT_ERROR_READ, client->client_addr) == -1)
+            if(LOG(CLIENT_ERROR_READ, client->client_addr, NULL) == -1)
                 printf("Error in LOG (error read)");
 
             remove_client(*client);
@@ -256,9 +259,14 @@ int handleRequest(struct client_info *client)
             //pharsing HTTP request
             parsingManager(readBuffer);
 
-            //TODO move into parsingManager
+            if(setting.error){
 
-
+                char server_mess[MAX_LOG_LEN];
+                sprintf(server_mess, "%s\n", setting.statusCode);
+                if(LOG(INTERNAL_SERVER_LOG, client->client_addr, server_mess) == -1)
+                    printf("Error in LOG (HTTP_ERROR)\n");
+                
+            }
 
             //printf("\t\tIn serverBranch, all the packet is:\n%s\n", response); //da levare
 
@@ -267,17 +275,14 @@ int handleRequest(struct client_info *client)
                 return -1;
             }
 
+            char server_mess[MAX_LOG_LEN];
+            sprintf(server_mess, "Page requested: '%s'\n", imageToInsert.name);
+            if(LOG(INTERNAL_SERVER_LOG, client->client_addr, server_mess) == -1)
+                printf("Error in LOG (client served)\n");
+
             //resetting parsing variable
             free(response);
             memset(&setting,0, sizeof(setting));
-
-            //TODO elaborazione coefficiente di adattamento
-            //TODO accesso in cache per (eventualmente) prelevare l'immagine
-            //TODO invio della risposta HTTP
-            //TODO inserimento (eventuale) dell'immagine adattata in cache
-
-            if(LOG(CLIENT_SERVED, client->client_addr) == -1)
-                printf("Error in LOG (client served)");
         }
 
         numSetsReady--;
@@ -433,7 +438,11 @@ int main(int argc, char **argv)
         exit(-1);
     }
 
-    ///here starts the main body of the server branch
+    //setting server address, used in LOG functions
+    memset((&serverAddr), 0, sizeof(serverAddr));
+    serverAddr.sin_port = htons(SERVER_PORT);
+    serverAddr.sin_addr.s_addr = htonl(SERVER_ADDR);
+
     int connect_fd, tryWaitRet;
 
     struct sockaddr_in acceptedClientAddress;
@@ -458,6 +467,11 @@ int main(int argc, char **argv)
     listenSet = allSet;
 
     max_fd = handler_info->listen_fd;
+
+    char server_mess[MAX_LOG_LEN];
+    sprintf(server_mess, "ServerBranch with pid %d created\n", getpid());
+    if(LOG(INTERNAL_SERVER_LOG, serverAddr, server_mess) == -1)
+        printf("Error in LOG (BRANCH_CREATION)\n");
 
     printf("\tServer branch with pid %d ready\n", getpid());
     //ready to serve clients

@@ -76,6 +76,10 @@ int logToString(struct log currentLog)
             strcpy(stringMessage, CLIENT_MERGED_S);
             //printf("6\n");
             break;
+        case INTERNAL_SERVER_LOG:
+            strcpy(stringMessage, currentLog.errorMess);
+            //printf("6\n");
+            break;
         default:
             printf("Something went wrong in logToString\n");
             return -1;

@@ -2,12 +2,15 @@
 // Created by ezio on 08/08/19.
 //
 
-int LOG(int log_type, struct sockaddr_in client)
+int LOG(int log_type, struct sockaddr_in client, char *string)
 {
     struct log newLog;
     newLog.client  = client;
     newLog.log_time = time(0);
     newLog.log_type = log_type;
+
+    if(log_type == INTERNAL_SERVER_LOG)
+        strcpy(newLog.errorMess, string);
 
     //acquiring sem_on_logs
     if(sem_wait(&sem_on_logs) == -1){

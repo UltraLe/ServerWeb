@@ -241,11 +241,8 @@ char *sendError(){
 
 char *parsingManager(char *request) {
 
-    char path[2048];
-    char data[900001];
-
-    memset(data, 0, sizeof(data));
-
+    char path[128];
+    
     //Check that the method is acceptable
     if (strncmp(request, "GET ", 4) == 0) {
         //Going over the if
@@ -333,7 +330,7 @@ char *parsingManager(char *request) {
 
         int cacheReturn = getImageInCache(&imageToInsert);
         
-        if ( cacheReturn == 0){
+        if (cacheReturn == 0){
 
             //takeFile(path);
 
@@ -351,6 +348,13 @@ char *parsingManager(char *request) {
 
             //TODO Salvare immagine ritornata in cache
             //TODO Elaborare risposta
+
+        }else if (cacheReturn == -1){
+
+            char server_mess[MAX_LOG_LEN];
+            sprintf(server_mess, "Cache error in branch %d\n", getpid());
+            if(LOG(INTERNAL_SERVER_LOG, serverAddr, server_mess) == -1)
+                printf("Error in LOG (CACHE_ERROR)\n");
         }
 
         //posting to insert a new element into the cache

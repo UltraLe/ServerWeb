@@ -17,10 +17,12 @@
 
 #define CLIENT_MERGED 6
 
+#define INTERNAL_SERVER_LOG 7
+
 #define WRITE_ON_DISK_TIMER_SEC 5                //time after which logs of each server branch will
                                                  //be copied on disk
 
-#define MAX_LOG_FILE_BYTE 1000000              //each log file will have a maximum number of bytes
+#define MAX_LOG_FILE_BYTE 100000000              //each log file will have a maximum number of bytes, 100MBytes
 
 #define MAX_LOG_FILENAME_LEN 20
 
@@ -46,4 +48,5 @@ struct log{
     time_t log_time;
     int log_type;
     struct sockaddr_in client;
+    char errorMess[MAX_LOG_LEN];
 };

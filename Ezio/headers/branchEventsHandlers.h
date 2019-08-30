@@ -75,7 +75,7 @@ void recive_clients()
             printf("Error in insert_new_client (recive_clients) branch: %d\n", getpid());
         }
 
-        if(LOG(CLIENT_MERGED, clientAddress) == -1)
+        if(LOG(CLIENT_MERGED, clientAddress, NULL) == -1)
             printf("Error in LOG (client served)");
 
     }while(1);
@@ -90,6 +90,11 @@ void recive_clients()
         perror("Error in close(recive_clients)");
         exit(-1);
     }
+
+    char server_mess[MAX_LOG_LEN];
+    sprintf(server_mess, "ServerBranch %d recived clients after merge\n", getpid());
+    if(LOG(INTERNAL_SERVER_LOG, serverAddr, server_mess) == -1)
+        printf("Error in LOG (merge)\n");
 
     //printf("Recived all clients\n");
 }
@@ -225,7 +230,7 @@ void clean(int signum)
         //if the client have been inactive for MAX_IDLE_TIME seconds, then colse its connection
         if(time_diff >= MAX_IDLE_TIME) {
 
-            if(LOG(CLIENT_IDLE, (current->client).client_addr) == -1)
+            if(LOG(CLIENT_IDLE, (current->client).client_addr, NULL) == -1)
                 printf("Error in LOG (client disconnected)");
 
             if (remove_client(current->client) == -1) {
