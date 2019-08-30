@@ -2,7 +2,7 @@
 */
 
 
-#include <MagickWand/MagickWand.h>
+#include <ImageMagick-7/MagickWand/MagickWand.h>
 
 //gfhjb
 
@@ -17,7 +17,7 @@ typedef struct image_blob_info{
 
 im_info_t* resizer(char* path, int width, int height, int qualita, char* format);
 
-
+/**
 int main(int argc, char *argv[]){
    char path[127];
    char format[15]; // which shuold be JPEG, or PNG or NULL   
@@ -34,7 +34,7 @@ int main(int argc, char *argv[]){
    printf("format: \n");         
    scanf("%15s", format);     //end of retrv infos
 
-/*test*/    printf("alive \n");
+//test    printf("alive \n");
 
    im_info_t* im = resizer(path, width, height, quality, format);
    MagickWand* nm_wand= NewMagickWand();
@@ -44,6 +44,7 @@ int main(int argc, char *argv[]){
    MagickWandTerminus();
    return 0;
 }
+*/
 
 
 
@@ -54,6 +55,7 @@ int main(int argc, char *argv[]){
 
 
 im_info_t* resizer(char* path, int width, int height, int quality, char* format){
+
    size_t temp_size;
    unsigned char* temp_buff;
    im_info_t* im_info;
@@ -63,10 +65,11 @@ im_info_t* resizer(char* path, int width, int height, int quality, char* format)
    MagickBooleanType status; //variable used to check on function results
 
    MagickWandGenesis();  //function of the api that does an obscure work to make the api work
-	
+
    m_wand = NewMagickWand(); // I make the wand object, the core of these api
 
-   status= MagickReadImage(m_wand, path); // Loading the Image in the wand so it can be manipulated
+   status = MagickReadImage(m_wand, path); // Loading the Image in the wand so it can be manipulated
+
    if (status == MagickFalse){
        perror("file not Found");
        setting.error = true;
@@ -74,14 +77,17 @@ im_info_t* resizer(char* path, int width, int height, int quality, char* format)
        return NULL;
    }
 
-   status= MagickAdaptiveResizeImage(m_wand,setting.width,setting.height); // resizing the iage in the wand
-    perror("Error in reading the image");
+   status = MagickAdaptiveResizeImage(m_wand,setting.width,setting.height); // resizing the iage in the wand
+    if (status == MagickFalse){
+
+        perror("Error in reading the image");
     setting.error = true;
     strcpy(setting.statusCode, ISE );
     return NULL;
    }
    
-   status= MagickSetImageCompressionQuality(m_wand, setting.quality);//TODO MODIFICARE IN INT   // Set the compression quality to quality (high quality = low compression)
+   status = MagickSetImageCompressionQuality(m_wand, setting.quality);//TODO MODIFICARE IN INT   // Set the compression quality to quality (high quality = low compression)
+
    if (status == MagickFalse){
        perror("Error in reading the image");
        setting.error = true;
@@ -90,11 +96,11 @@ im_info_t* resizer(char* path, int width, int height, int quality, char* format)
    }
    
    /* fixing the format*/
-   if(strcmp(setting.type, JPEG)==0){
-   MagickSetImageFormat(m_wand, "JPEG");  
+    if(strcmp(setting.type, JPEG)==0){
+        MagickSetImageFormat(m_wand, "JPEG");
    } 
    else if(strcmp(setting.type, PNG)==0){
-   MagickSetImageFormat(m_wand, "PNG");  
+        MagickSetImageFormat(m_wand, "PNG");
    }
 
    //TODO Settare il tipo in base all'immagine
@@ -102,11 +108,10 @@ im_info_t* resizer(char* path, int width, int height, int quality, char* format)
    /*writing image ina a buffer 
      and preparing struct to return*/
 
-   //temp_buff = MagickGetImageBlob(m_wand,&temp_size); // writing image in ram as a stream of byte
-    imageToInsert. = MagickGetImageBlob(m_wand,&temp_size); // writing image in ram as a stream of byte
+    //temp_buff = MagickGetImageBlob(m_wand,&temp_size); // writing image in ram as a stream of byte
+    //imageToInsert. = MagickGetImageBlob(m_wand,&temp_size); // writing image in ram as a stream of byte
 
-
-im_info= (im_info_t*)malloc(sizeof(im_info_t)); //allocating the struct I'll return
+    im_info = (im_info_t*)malloc(sizeof(im_info_t)); //allocating the struct I'll return
  
    im_info->size= temp_size;
 
@@ -123,6 +128,7 @@ im_info= (im_info_t*)malloc(sizeof(im_info_t)); //allocating the struct I'll ret
    if(m_wand)m_wand = DestroyMagickWand(m_wand); //try: after destoy, if(m_wand)=?maybe false
    MagickWandTerminus();
    return im_info;
+
 }
 
 

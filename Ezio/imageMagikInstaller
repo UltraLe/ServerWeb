@@ -1,0 +1,15 @@
+#!/bin/bash
+
+sudo apt install -y build-essential
+sudo apt install -y aptitude
+sudo aptitude install libmagickwand-dev libmagickcore-dev imagemagick --safe-resolver
+wget https://imagemagick.org/download/ImageMagick.tar.gz
+sudo tar -xzvf ImageMagick.tar.gz
+sudo rm ImageMagick.tar.gz
+cd ImageMagick*
+sudo ./configure
+sudo make
+sudo make install
+sudo ldconfig /usr/local/lib
+
+sudo /usr/local/bin/convert logo: logo.gif
