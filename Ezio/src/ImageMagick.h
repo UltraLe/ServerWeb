@@ -11,6 +11,8 @@
 #include <sys/mman.h>
 #include <MagickWand/MagickWand.h>
 
+//gfhjb
+
 
 typedef struct image_blob_info{
    unsigned char* buff;
