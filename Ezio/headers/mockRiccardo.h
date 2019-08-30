@@ -1,7 +1,11 @@
 //
 // Created by ezio on 29/08/19.
 //
-#include "ImageMagick.h"
+
+#include "imageMagick.h"
+
+
+
 int imageMagikMock(char *imagePath)
 {
     //read dell'imagine da disco

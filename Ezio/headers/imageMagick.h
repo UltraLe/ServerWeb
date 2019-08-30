@@ -1,14 +1,7 @@
 /* compile with gcc 'solo funzione.c' `pkg-config --cflags --libs MagickWand` -O2 -Wall  -o slf
 */
 
-#include <sys/types.h>
-#include <sys/shm.h>
-#include <sys/sem.h>
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
-#include <unistd.h>
-#include <sys/mman.h>
+
 #include <MagickWand/MagickWand.h>
 
 //gfhjb
