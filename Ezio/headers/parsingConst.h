@@ -17,6 +17,7 @@
 #define TEXT "Content-Type: text/html\n"
 #define JPEG "Content-Type: image/jpeg\n"
 #define PNG "Content-Type: image/png\n"
+#define ICON "Content-Type: image/x-icon\n"
 #define NOTHING ""
 
 #define ALIVE "keep-alive"

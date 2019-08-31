@@ -1,6 +1,6 @@
 //
 // Created by ezio on 16/07/19.
-// esegsgsegsgh
+// 
 
 #include <stdbool.h>
 #include <fcntl.h>
@@ -180,6 +180,7 @@ char *takeFile(char *path){
         strcpy(setting.statusCode, ISE );
         return NULL;
     }
+    printf("l'immagine è lunga: %d\n",imageToInsert.imageSize);
 
     return NULL;
 }
@@ -295,14 +296,16 @@ char *parsingManager(char *request) {
             memcpy(response + setting.headerSize, homeHTML, setting.payloadSize );
         }
         return response;
+
     //Image for HomePage
     } else if (strncmp(path, "/sito/", 6) == 0) {
         takeFile(path);
         strcpy(setting.type,PNG);
-
+        setting.payloadSize = imageToInsert.imageSize;
+    // Icon
     }else if(strncmp(path, "/favicon.ico", 12) == 0){
         takeFile(path);
-        strcpy(setting.type, "ico");
+        strcpy(setting.type, ICON);
     }
     else if (strncmp(path, "/Images/", 8) == 0) {
 
@@ -400,5 +403,6 @@ char *parsingManager(char *request) {
     if(!setting.head){
         memcpy(response + setting.headerSize, imageToInsert.imageBytes, setting.payloadSize );
     }
+    printf("La risposta è : %s\n lunga %d" ,response, responseSize);
     return response;
 }
