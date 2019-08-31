@@ -70,8 +70,6 @@ int main(int argc, char **argv)
 
     printf("There were ->[ %d ]<- possibilities\n\n", IMAGES_NUM*10*MAX_COMMON_WIDTH*MAX_COMMON_HEIGHT*2);
 
-    printf("There were ->[ %d ]<- possibilities (Giovanni\n\n", IMAGES_NUM*10*10*2);
-
     printf("The dimension of each hash_element would be %ld\n\n", sizeof(struct hash_element));
 
     printf("The dimension of the cache would be %ld, with %d hash keys\n\n", CACHE_BYTES, MAX_HASH_KEYS);
