@@ -25,9 +25,25 @@ int getImageInCache(struct image *imageToGet)
 
     struct image *tempImage;
 
-    //printf("2 waiting in semToHashBlock in cache\n");
-    if(sem_wait(&(hashElement->semToHashBlock)) == -1 ){
+    errno = 0;
+    
+    int tryWaitResult = sem_trywait(&(hashElement->semToHashBlock));
+
+    if(errno != EAGAIN && errno != 0){
+        errno = 0;
         perror("Error in semwait (getImage in cache)");
+        return -1;
+    }else if (errno == EAGAIN){
+        if(sem_wait(&(hashElement->dontRead)) == -1 ){
+            perror("Error in semwait (dontRead, getImage)");
+            return -1;
+        }
+    }
+
+    //the cache readers will able to unlock 'dontRead' semaphores
+    //in order to allow them to read in cache concurrently
+    if(sem_post(&(hashElement->dontRead)) == -1 ){
+        perror("Error in sempost (dontRead, getImage)");
         return -1;
     }
 
@@ -158,6 +174,12 @@ int insert()
         return -1;
     }
 
+    //locking the readers
+    if(sem_wait(&(hashElement->dontRead)) == -1 ){
+        perror("Error in semwait (insert, getImage)");
+        return -1;
+    }
+
     //the image with the minimum counter has been selected, inserting
     (imageSet + selectedPosition)->counter = 1;
 
@@ -172,6 +194,13 @@ int insert()
 
     //printf("Inserted image in cache, in %d position and i (in image array): %d\n", key, selectedPosition);
 
+    //unlocking readers
+    if(sem_post(&(hashElement->dontRead)) == -1 ){
+        perror("Error in sempost (dontRead, getImage)");
+        return -1;
+    }
+
+    //unlocking writers og the cache
     //printf("6 posting in semToHashBlock in cache\n");
     if(sem_post(&(hashElement->semToHashBlock)) == -1 ){
         perror("Error in semwait (insert in cache)");

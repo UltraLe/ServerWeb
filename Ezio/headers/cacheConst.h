@@ -30,4 +30,5 @@ struct hash_element{
     unsigned short key;
     struct image conflictingImages[MAX_IMAGE_NUM_PER_KEY];
     sem_t semToHashBlock;
+    sem_t dontRead;
 };

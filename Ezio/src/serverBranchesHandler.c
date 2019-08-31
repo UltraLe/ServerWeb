@@ -408,6 +408,14 @@ int main(int argc, char **argv) {
             exit(-1);
         }
 
+        //initializing semaphore that will be used by the cacheManager
+        //to block reading in cache in order to write and
+        //allow readers to concurrently read in cache
+        if (sem_init(&((cache+i)->dontRead), 1, 1) == -1) {
+            perror("Error in sem_init (dontRead): ");
+            exit(-1);
+        }
+
         //initializing the counter used to select the least frequently
         //used images into the cache_element
         for(int j = 0; j < MAX_IMAGE_NUM_PER_KEY; ++j)

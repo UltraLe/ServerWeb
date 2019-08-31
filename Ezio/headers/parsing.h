@@ -180,7 +180,6 @@ char *takeFile(char *path){
         strcpy(setting.statusCode, ISE );
         return NULL;
     }
-    printf("l'immagine è lunga: %d\n",imageToInsert.imageSize);
 
     return NULL;
 }
@@ -407,6 +406,6 @@ char *parsingManager(char *request) {
     if(!setting.head){
         memcpy(response + setting.headerSize, imageToInsert.imageBytes, setting.payloadSize );
     }
-    printf("La risposta è : %s\n lunga %d" ,response, responseSize);
+
     return response;
 }
