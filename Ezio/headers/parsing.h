@@ -40,7 +40,6 @@ int loadHomePage()
 }
 
 void acceptAnalyzer(char *request) {
-    printf("La richiesta è: \n %s\n ", request);
     setting.quality = -1;
     char *attribute;
     char q[4];
