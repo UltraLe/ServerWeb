@@ -9,7 +9,6 @@
 
 char *response;
 struct paramResponse setting;
-
 char *homeHTML;
 int homePageBytes;
 
@@ -245,7 +244,6 @@ char *sendError(){
 char *parsingManager(char *request) {
 
     char path[128];
-    printf("La richiesta è: \n %s\n ", request);
 
     //Check that the method is acceptable
     if (strncmp(request, "GET ", 4) == 0) {
@@ -307,16 +305,18 @@ char *parsingManager(char *request) {
         takeFile(path);
         strcpy(setting.type, ICON);
         setting.payloadSize = imageToInsert.imageSize;
-
-        printf("Sono passato di qui");
     }
+
+    //Main images
     else if (strncmp(path, "/Images/", 8) == 0) {
 
+        //Check resolution device
         resolutionPhone(request);
         if (setting.error) {
             return sendError();
         }
 
+        //Check accept line
         acceptAnalyzer(request);
         if (setting.error) {
             return sendError();
@@ -344,6 +344,7 @@ char *parsingManager(char *request) {
             imageToInsert.isPng = 2;
         }
 
+        //Check if image is in Cache
         int cacheReturn = getImageInCache(&imageToInsert);
         
         if (cacheReturn == 0){
@@ -354,15 +355,8 @@ char *parsingManager(char *request) {
                 perror("Error in imageMagik");
                 return sendError();
             }
-            //TODO Inserire funzione resizing
-            //TODO Gestire tutti gli errori
-            //TODO Settare imageToInsert type e size ......
-
             if(sem_post(&activateCacheManager) == -1)
                 perror("Error in sempost (activateCacheManager)");
-
-            //TODO Salvare immagine ritornata in cache
-            //TODO Elaborare risposta
 
         }else if (cacheReturn == -1){
 
@@ -370,6 +364,7 @@ char *parsingManager(char *request) {
             sprintf(server_mess, "Cache error in branch %d\n", getpid());
             if(LOG(INTERNAL_SERVER_LOG, serverAddr, server_mess) == -1)
                 printf("Error in LOG (CACHE_ERROR)\n");
+
         }
 
         //posting to insert a new element into the cache
@@ -394,15 +389,16 @@ char *parsingManager(char *request) {
         return sendError();
     }
 
+    //Set the response with...
     int responseSize = sizeof(char)*setting.payloadSize+300;
     response = (char *)malloc(responseSize);
     memset(response, 0, responseSize);
 
-    // I set the header
+    // ... the header and ...
     PARSEHEADER(response,OK,setting.type,setting.payloadSize,ALIVE);
     setting.headerSize = strlen(response);
 
-    //I check if the metod is HEAD
+    //... the payload if metod isn't HEAD
     if(!setting.head){
         memcpy(response + setting.headerSize, imageToInsert.imageBytes, setting.payloadSize );
     }

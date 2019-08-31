@@ -29,26 +29,18 @@ int resizer(char* path){
 
     widthRapport = setting.width / widthImage;
     heightRapport = setting.height / heightImage;
-    
-    printf("Resolution Image is: %f x %f\n",widthImage,heightImage);
-
-    printf("Resolution Phone is: %d x %d\n",setting.width,setting.height);
-    printf("Resolution Rapports is: width %f x height %f\n", widthRapport, heightRapport);
 
     if (widthRapport <= heightRapport && widthRapport < 1){
         widthDesire = (int)(widthImage * widthRapport);
         heightDesire = (int)(heightImage * widthRapport);
-        printf("Resolution Desire is: %d x %d in if\n",widthDesire,heightDesire);
 
     } else if (widthRapport > heightRapport && heightRapport < 1) {
         widthDesire = (int) (widthImage * heightRapport);
         heightDesire = (int) (heightImage * heightRapport);
-        printf("Resolution Desire is: %d x %d in else if\n",widthDesire,heightDesire);
 
     } else {
         widthDesire = (int)widthImage;
         heightDesire = (int)heightImage;
-        printf("Resolution Desire is: %d x %d in else\n",widthDesire,heightDesire);
 
     }
     
@@ -79,7 +71,6 @@ int resizer(char* path){
         MagickSetImageFormat(m_wand, "PNG");
     }
 
-    //TODO Settare il tipo in base all'immagine
 
     /*writing image ina a buffer
       and preparing struct to return*/
