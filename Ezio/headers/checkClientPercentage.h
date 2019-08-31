@@ -84,12 +84,12 @@ void checkClientPercentage()
                 break;
         }
 
-        //TODO uncomment before deploy (run with sudo)
-        /*
-        if(setpriority(PRIO_PROCESS, getpid(), priority) == -1){
+        //TODO run with sudo
+
+        if(setpriority(PRIO_PROCESS, getpid(), priority) == -1) {
             perror("Error in setpriority");
         }
-         */
+
     }
 
     //printf("Percentage checked, old_perc: %f, new_perc: %f\n", old_perc, new_perc);

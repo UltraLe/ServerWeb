@@ -31,12 +31,12 @@
 
 #include "cacheConst.h"
 
-#define NUM_INIT_SB 4           //number of the server branches that will be always
+#define NUM_INIT_SB 5           //number of the server branches that will be always
                                 //ready to serve clients
 
-#define MAX_CLI_PER_SB 1024     //number of clients that each server branch will handle (512)
+#define MAX_CLI_PER_SB 1033     //number of clients that each server branch will handle (512)
 
-#define CLEANER_CHECK_SEC 90   //number of seconds after which a cleaner will check for
+#define CLEANER_CHECK_SEC 62   //number of seconds after which a cleaner will check for
                                 //idle client, and close their connection (120)
 
 #define MAX_IDLE_TIME 60        //number of seconds after which will be closed a connection

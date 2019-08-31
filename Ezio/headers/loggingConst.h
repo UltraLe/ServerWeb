@@ -26,7 +26,7 @@
 
 #define MAX_LOG_FILENAME_LEN 20
 
-#define MAX_FILE_LOGS 2
+#define MAX_FILE_LOGS 10
 
 #define MAX_LOG_LEN 50
 
