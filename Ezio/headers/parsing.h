@@ -171,7 +171,7 @@ char *takeFile(char *path){
 
     lseek(im_fd, 0, SEEK_SET);
 
-    if((setting.payloadSize = read(im_fd, imageToInsert.imageBytes , image_byte)) == -1){
+    if((imageToInsert.imageSize = read(im_fd, imageToInsert.imageBytes , image_byte)) == -1){
         perror("Error in reading the image");
         setting.error = true;
         strcpy(setting.statusCode, ISE );
@@ -292,9 +292,11 @@ char *parsingManager(char *request) {
             memcpy(response + setting.headerSize, homeHTML, setting.payloadSize );
         }
         return response;
+    //Image for HomePage
+    } else if (strncmp(path, "/sito/", 6) == 0) {
+        takeFile(path);
 
-
-    } else if (strncmp(path, "/Images/", 7) == 0) {
+    } else if (strncmp(path, "/Images/", 8) == 0) {
 
         resolutionPhone(request);
         if (setting.error) {
