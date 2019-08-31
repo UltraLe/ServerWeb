@@ -24,13 +24,10 @@ int getImageInCache(struct image *imageToGet)
     struct hash_element *hashElement = (cache + key);
 
     struct image *tempImage;
-
-    errno = 0;
     
     int tryWaitResult = sem_trywait(&(hashElement->semToHashBlock));
 
     if(errno != EAGAIN && errno != 0){
-        errno = 0;
         perror("Error in semwait (getImage in cache)");
         return -1;
     }else if (errno == EAGAIN){
@@ -102,9 +99,15 @@ int getImageInCache(struct image *imageToGet)
         imageToGet->imageSize = tempImage->imageSize;
 
         //printf("3 posting in semToHashBlock in cache\n");
-        if(sem_post(&(hashElement->semToHashBlock)) == -1 ){
-            perror("Error in sempost (getImage in cache)");
-            return -1;
+        //the semaphore has to be inlocked only by the reader that has posted it
+        if(errno != EAGAIN) {
+            if (sem_post(&(hashElement->semToHashBlock)) == -1) {
+                perror("Error in sempost (getImage in cache)");
+                return -1;
+            }
+            
+            //resetting errno
+            errno = 0;
         }
 
         //printf("Found in position %d\n", i);
