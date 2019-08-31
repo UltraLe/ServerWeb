@@ -10,8 +10,6 @@ add_executable(ServerBranch Ezio/src/serverBranch.c)
 target_link_libraries(ServerBranch pthread)
 target_link_libraries(ServerBranch wurfl)
 
-#target_link_libraries(ServerBranch MagickWand)
-
 find_package(PkgConfig)
 if (PKG_CONFIG_FOUND)
     pkg_check_modules(GTK "MagickWand")
