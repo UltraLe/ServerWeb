@@ -40,6 +40,7 @@ int loadHomePage()
 }
 
 void acceptAnalyzer(char *request) {
+    printf("La richiesta è: \n %s\n ", request);
     setting.quality = -1;
     char *attribute;
     char q[4];
@@ -246,6 +247,7 @@ char *sendError(){
 char *parsingManager(char *request) {
 
     char path[128];
+    printf("La richiesta è: \n %s\n ", request);
 
     //Check that the method is acceptable
     if (strncmp(request, "GET ", 4) == 0) {
@@ -306,6 +308,9 @@ char *parsingManager(char *request) {
     }else if(strncmp(path, "/favicon.ico", 12) == 0){
         takeFile(path);
         strcpy(setting.type, ICON);
+        setting.payloadSize = imageToInsert.imageSize;
+
+        printf("Sono passato di qui");
     }
     else if (strncmp(path, "/Images/", 8) == 0) {
 
