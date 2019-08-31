@@ -114,6 +114,21 @@ int getImageInCache(struct image *imageToGet)
 
 
 
+void printImageStat()
+{
+    printf("q: %d\n", imageToInsert.quality);
+    printf("w: %d\n", imageToInsert.width);
+    printf("h: %d\n", imageToInsert.height);
+    printf("isPng: %d\n", imageToInsert.isPng);
+    printf("size: %d\n", imageToInsert.imageSize);
+    printf("name: %s\n", imageToInsert.name);
+    printf("counter: %d\n", imageToInsert.counter);
+    printf("data: %s\n\n", imageToInsert.imageBytes);
+
+}
+
+
+
 //this function is called by the cacheManager to insert
 //a new image into the cache
 int insert()

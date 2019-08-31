@@ -7,7 +7,7 @@
 #define NC  "204 No Content"
 #define BR "400 Bad Request"
 #define NF  "404 Not Found"
-#define MNA  "405 Method Not Allowed"
+#define NI  "501 Not Implemented"
 #define NA   "406 Not Acceptable" 
 #define ISE  "500 Internal Server Error"
 #define VNS  "505 HTTP Version Not Supported"

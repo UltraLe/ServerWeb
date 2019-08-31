@@ -78,7 +78,7 @@ int logToString(struct log currentLog)
             break;
         case INTERNAL_SERVER_LOG:
             strcpy(stringMessage, currentLog.errorMess);
-            //printf("6\n");
+            //printf("7\n");
             break;
         default:
             printf("Something went wrong in logToString\n");
@@ -253,7 +253,7 @@ int sortLoggersLogs()
             //printf("Before calling logToString\n");
 
             if (logToString(minLog) == -1) {
-                printf("Error in logToString, branch: numToWait: %d\n", loggerToWait);
+                printf("Error in logToString, branch: %d numToWait: %d\n",getpid(), loggerToWait);
                 return -1;
             }
 

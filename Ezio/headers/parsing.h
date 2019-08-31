@@ -79,7 +79,7 @@ void acceptAnalyzer(char *request) {
              } else qImages = 1;
         }
     }
-    
+
     if ((qJpeg==0 || qPng ==0) && qImages ==0){
         if ((attribute = strstr(accept, "*/*")) != NULL) {
 
@@ -90,12 +90,11 @@ void acceptAnalyzer(char *request) {
             }
         }
     }
-
     if (qAll== qJpeg && qAll == qPng){
         strcpy(setting.type,NOTHING);
         setting.quality = qAll;
     }
-    else if (qJpeg == qPng){
+    else if (qJpeg == qPng && qAll == 0){
         strcpy(setting.type,NOTHING);
         setting.quality = qPng;
     }
@@ -126,6 +125,10 @@ void acceptAnalyzer(char *request) {
     if (qAll == 0 && qJpeg ==0 && qPng == 0 && qImages == 0){
         setting.error = true;
         strcpy(setting.statusCode, NA);
+    }
+
+    if (setting.quality == 0.0){
+        setting.quality =1;
     }
 }
 
@@ -242,7 +245,7 @@ char *sendError(){
 char *parsingManager(char *request) {
 
     char path[128];
-    
+
     //Check that the method is acceptable
     if (strncmp(request, "GET ", 4) == 0) {
         //Going over the if
@@ -256,7 +259,7 @@ char *parsingManager(char *request) {
                strncmp(request, "TRACE ", 6) == 0 ||
                strncmp(request, "OPTIONS ", 8) == 0) {
         setting.error = true;
-        strcpy(setting.statusCode, MNA);
+        strcpy(setting.statusCode, NI);
 
     } else {
         setting.error = true;
@@ -295,8 +298,13 @@ char *parsingManager(char *request) {
     //Image for HomePage
     } else if (strncmp(path, "/sito/", 6) == 0) {
         takeFile(path);
+        strcpy(setting.type,PNG);
 
-    } else if (strncmp(path, "/Images/", 8) == 0) {
+    }else if(strncmp(path, "/favicon.ico", 12) == 0){
+        takeFile(path);
+        strcpy(setting.type, "ico");
+    }
+    else if (strncmp(path, "/Images/", 8) == 0) {
 
         resolutionPhone(request);
         if (setting.error) {
@@ -314,8 +322,8 @@ char *parsingManager(char *request) {
             perror("Error in semwait (activateCacheManager)");
 
         strcpy(imageToInsert.name, path+8);
-        
-        imageToInsert.quality = ((int)setting.quality*10)%10;
+        imageToInsert.quality = ((int)(setting.quality*10))%10;
+
 
         imageToInsert.width = setting.width;
         imageToInsert.height = setting.height;
@@ -336,15 +344,14 @@ char *parsingManager(char *request) {
 
             //takeFile(path);
 
-            if(imageMagikMock(path) == -1){
-                perror("Error in imageMafikMock");
+            if(resizer(path) == -1){
+                perror("Error in imageMagik");
                 return sendError();
             }
-
             //TODO Inserire funzione resizing
             //TODO Gestire tutti gli errori
             //TODO Settare imageToInsert type e size ......
-            
+
             if(sem_post(&activateCacheManager) == -1)
                 perror("Error in sempost (activateCacheManager)");
 
@@ -382,7 +389,6 @@ char *parsingManager(char *request) {
     }
 
     int responseSize = sizeof(char)*setting.payloadSize+300;
-
     response = (char *)malloc(responseSize);
     memset(response, 0, responseSize);
 
