@@ -1,151 +1,87 @@
 /* compile with gcc 'solo funzione.c' `pkg-config --cflags --libs MagickWand` -O2 -Wall  -o slf
 */
 
-
 #include <ImageMagick-7/MagickWand/MagickWand.h>
 
-//gfhjb
-
-
 typedef struct image_blob_info{
-   unsigned char* buff;
-   size_t size; //in byte
-   char format[15];
+    unsigned char* buff;
+    size_t size; //in byte
+    char format[15];
 } im_info_t;
-
-
-
-im_info_t* resizer(char* path, int width, int height, int qualita, char* format);
-
-/**
-int main(int argc, char *argv[]){
-   char path[127];
-   char format[15]; // which shuold be JPEG, or PNG or NULL   
-   int width, height, quality;
-
-   printf("Path: \n");         //start retrieving info for the resizing
-   scanf("%127s", path);
-   printf("Width: \n");
-   scanf("%d", &width);
-   printf("Height: \n");
-   scanf("%d", &height);
-   printf("Quality: \n");
-   scanf("%d", &quality);
-   printf("format: \n");         
-   scanf("%15s", format);     //end of retrv infos
-
-//test    printf("alive \n");
-
-   im_info_t* im = resizer(path, width, height, quality, format);
-   MagickWand* nm_wand= NewMagickWand();
-   
-   MagickReadImageBlob(nm_wand, (void*)im->buff,im->size);
-   MagickWriteImage(nm_wand,"finito");	
-   MagickWandTerminus();
-   return 0;
-}
-*/
-
-
-
 
 /* il path deve essere dato nella forma images/image,
    e non /images/image
 */
 
 
-im_info_t* resizer(char* path, int width, int height, int quality, char* format){
+im_info_t* resizer(char* path){
+    size_t temp_size;
+    unsigned char* temp_buff;
+    im_info_t* im_info;
+    MagickWand* m_wand = NULL;
+    char* temp_format;
 
-   size_t temp_size;
-   unsigned char* temp_buff;
-   im_info_t* im_info;
-   MagickWand* m_wand = NULL;
-   char* temp_format;
-   
-   MagickBooleanType status; //variable used to check on function results
+    MagickBooleanType status; //variable used to check on function results
 
-   MagickWandGenesis();  //function of the api that does an obscure work to make the api work
+    MagickWandGenesis();  //function of the api that does an obscure work to make the api work
 
-   m_wand = NewMagickWand(); // I make the wand object, the core of these api
+    m_wand = NewMagickWand(); // I make the wand object, the core of these api
 
-   status = MagickReadImage(m_wand, path); // Loading the Image in the wand so it can be manipulated
-
-   if (status == MagickFalse){
-       perror("file not Found");
-       setting.error = true;
-       strcpy(setting.statusCode, NF);
-       return NULL;
-   }
-
-   status = MagickAdaptiveResizeImage(m_wand,setting.width,setting.height); // resizing the iage in the wand
+    status= MagickReadImage(m_wand, path+1); // Loading the Image in the wand so it can be manipulated
     if (status == MagickFalse){
+        perror("file not Found");
+        setting.error = true;
+        strcpy(setting.statusCode, NF);
+        return NULL;
+    }
 
-        perror("Error in reading the image");
-    setting.error = true;
-    strcpy(setting.statusCode, ISE );
-    return NULL;
-   }
-   
-   status = MagickSetImageCompressionQuality(m_wand, setting.quality);//TODO MODIFICARE IN INT   // Set the compression quality to quality (high quality = low compression)
+    status = MagickAdaptiveResizeImage(m_wand,setting.width,setting.height); // resizing the iage in the wand
+    if (status == MagickFalse){
+        perror("Error in resizing");
+        setting.error = true;
+        strcpy(setting.statusCode, ISE );
+        return NULL;
+    }
 
-   if (status == MagickFalse){
-       perror("Error in reading the image");
-       setting.error = true;
-       strcpy(setting.statusCode, ISE );
-       return NULL;
-   }
-   
-   /* fixing the format*/
+    status= MagickSetImageCompressionQuality(m_wand, (int)(setting.quality*100)); // Set the compression quality to quality (high quality = low compression)
+    if (status == MagickFalse){
+        perror("Error in compression");
+        setting.error = true;
+        strcpy(setting.statusCode, ISE );
+        return NULL;
+    }
+
+    /* fixing the format*/
     if(strcmp(setting.type, JPEG)==0){
         MagickSetImageFormat(m_wand, "JPEG");
-   } 
-   else if(strcmp(setting.type, PNG)==0){
+    }
+    else if(strcmp(setting.type, PNG)==0){
         MagickSetImageFormat(m_wand, "PNG");
-   }
+    }
 
-   //TODO Settare il tipo in base all'immagine
+    //TODO Settare il tipo in base all'immagine
 
-   /*writing image ina a buffer 
-     and preparing struct to return*/
+    /*writing image ina a buffer
+      and preparing struct to return*/
 
-    //temp_buff = MagickGetImageBlob(m_wand,&temp_size); // writing image in ram as a stream of byte
-    //imageToInsert. = MagickGetImageBlob(m_wand,&temp_size); // writing image in ram as a stream of byte
+    temp_buff = MagickGetImageBlob(m_wand,&temp_size); // writing image in ram as a stream of byte
 
-    im_info = (im_info_t*)malloc(sizeof(im_info_t)); //allocating the struct I'll return
- 
-   im_info->size= temp_size;
+    bcopy((void*)temp_buff, (void*)imageToInsert.imageBytes, temp_size); //writing the image in the allocated memory
 
-   im_info->buff= (unsigned char*)malloc(temp_size); //allocating memory for the image
+    imageToInsert.imageSize = temp_size;
 
-   bcopy((void*)temp_buff, (void*)im_info->buff, temp_size); //writing the image in the allocated memory
+    temp_format= MagickGetImageFormat(m_wand);
 
-   temp_format= MagickGetImageFormat(m_wand);
+    if(strcmp(temp_format, "JPEG")==0){
+        imageToInsert.isPng = 0;
+    }
+    else if(strcmp(temp_format, "PNG")==0){
+        imageToInsert.isPng = 1;
+    }
 
-   sprintf(im_info->format, "%s\n", temp_format); //writing image format in the struct
-
-   /* Clean up */
-   MagickRelinquishMemory((void*)temp_buff);
-   if(m_wand)m_wand = DestroyMagickWand(m_wand); //try: after destoy, if(m_wand)=?maybe false
-   MagickWandTerminus();
-   return im_info;
-
+    /* Clean up */
+    MagickRelinquishMemory((void*)temp_buff);
+    if(m_wand)m_wand = DestroyMagickWand(m_wand); //try: after destoy, if(m_wand)=?maybe false
+    MagickWandTerminus();
+    return im_info;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
